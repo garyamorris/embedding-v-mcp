@@ -1,11 +1,8 @@
-import { UMAP } from "umap-js";
-
 import { exampleQueries } from "@/data/demo-data";
 import type {
   EmbeddingGranularity,
   EmbeddingMapNode,
   EmbeddingMapPayload,
-  EmbeddingProjection,
   EvidenceCard,
 } from "@/lib/demo-types";
 import { EMBEDDING_MODEL } from "@/lib/openai";
@@ -86,15 +83,6 @@ function seededVector(length: number, seed: number) {
     Math.sin((index + 1) * (seed + 1) * 0.73) +
     Math.cos((index + 1) * (seed + 2) * 0.41),
   );
-}
-
-function createSeededRandom(seed: number) {
-  let state = seed >>> 0;
-
-  return () => {
-    state = (1664525 * state + 1013904223) >>> 0;
-    return state / 4294967296;
-  };
 }
 
 function buildMean(vectors: number[][]) {
@@ -357,16 +345,15 @@ async function getEmbeddedExampleQueries() {
 
 async function getProjectionSpace(
   granularity: EmbeddingGranularity,
-  projection: EmbeddingProjection,
 ) {
-  const key = `${granularity}:${projection}`;
+  const key = granularity;
   const cached = projectionCache.get(key);
 
   if (cached) {
     return cached;
   }
 
-  const promise = buildProjectionSpace(granularity, projection);
+  const promise = buildProjectionSpace(granularity);
   projectionCache.set(key, promise);
 
   return promise;
@@ -374,31 +361,9 @@ async function getProjectionSpace(
 
 async function buildProjectionSpace(
   granularity: EmbeddingGranularity,
-  projection: EmbeddingProjection,
 ): Promise<ProjectionSpace> {
   const corpus = await getEmbeddedCorpus(granularity);
   const vectors = corpus.map((record) => record.embedding);
-
-  if (projection === "umap") {
-    const umap = new UMAP({
-      minDist: granularity === "record" ? 0.18 : 0.11,
-      nComponents: 3,
-      nEpochs: 350,
-      nNeighbors: Math.max(6, Math.min(18, Math.round(Math.sqrt(vectors.length)) + 3)),
-      random: createSeededRandom(granularity === "record" ? 42 : 99),
-      spread: 1.04,
-    });
-    const corpusCoordinates = umap.fit(vectors);
-
-    return {
-      corpusCoordinates,
-      label: `3D UMAP projection of the ${granularity}-level embedding corpus`,
-      project: (vector) => {
-        const projected = umap.transform([vector])[0];
-        return [projected[0] ?? 0, projected[1] ?? 0, projected[2] ?? 0];
-      },
-    };
-  }
 
   const basis = computePrincipalComponents(vectors, 3);
   const corpusCoordinates = vectors.map((vector) =>
@@ -443,13 +408,11 @@ function buildNode(
 
 export async function buildEmbeddingMapPayload({
   granularity = "record",
-  projection = "pca",
   query,
   showExampleQueries = false,
   showCentroids = false,
 }: {
   granularity?: EmbeddingGranularity;
-  projection?: EmbeddingProjection;
   query: string;
   showExampleQueries?: boolean;
   showCentroids?: boolean;
@@ -457,7 +420,7 @@ export async function buildEmbeddingMapPayload({
   const normalizedQueryText = query.trim();
   const [corpus, projectionSpace, queryEmbedding, exampleQuerySeeds] = await Promise.all([
     getEmbeddedCorpus(granularity),
-    getProjectionSpace(granularity, projection),
+    getProjectionSpace(granularity),
     normalizedQueryText
       ? getQueryEmbedding(normalizedQueryText)
       : Promise.resolve<number[] | null>(null),
@@ -687,7 +650,7 @@ export async function buildEmbeddingMapPayload({
     model: EMBEDDING_MODEL,
     nearest,
     nodes,
-    projection,
+    projection: "pca",
     projectionLabel: projectionSpace.label,
     query: normalizedQueryText,
     links,

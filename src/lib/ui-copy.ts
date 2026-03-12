@@ -1,4 +1,4 @@
-import type { EmbeddingGranularity, EmbeddingProjection } from "@/lib/demo-types";
+import type { EmbeddingGranularity } from "@/lib/demo-types";
 
 export const uiCopy = {
   labels: {
@@ -24,41 +24,39 @@ export const uiCopy = {
   comparePage: {
     hero: {
       kicker: "Tool Retrieval vs Semantic Retrieval",
-      title: "Compare retrieval paths",
+      title: "See where retrieval diverges",
       body:
-        "Ask one question. Both bots work from the same support dataset, but they retrieve evidence in different ways.",
-      cta: "Semantic Map",
-      datasetChip: "Local support corpus",
-      cacheChip: "Semantic index warms on first run",
+        "Run one business question through the same support corpus and compare how each path finds evidence.",
+      cta: "Open Semantic Map",
+      datasetLine:
+        "11 support tickets, 6 enhancement candidates, and 4 incidents in the local demo corpus.",
     },
     sections: {
       suggestedQuestionsTitle: "Suggested questions",
-      suggestedQuestionsBody:
-        "Start with one of these prompts or type your own question below.",
-      askTitle: "Run a question",
-      askBody: "The same question is sent to both bots.",
+      askTitle: "Launcher",
+      askBody: "Send one question through both retrieval paths.",
       questionPlaceholder:
         "Ask about recurring pain points, implied improvements, or hidden reliability concerns.",
-      compareLabel: "Comparison",
-      compareTitle: "Latest comparison",
+      compareLabel: "Latest result",
+      compareTitle: "The answer changed because the evidence changed",
       compareBody:
-        "Tool retrieval depends on explicit hits. Semantic retrieval ranks nearby meaning before answering.",
+        "Both bots start from the same dataset. The difference comes from how they retrieve supporting evidence.",
       submit: "Compare answers",
-      clear: "Clear result",
+      clear: "Clear",
     },
     panels: {
       tool: {
         label: "Tool Bot",
-        title: "Explicit lookups over structured tools",
-        subtitle: "Uses keyword search, tag filters, and exact-name lookups.",
+        title: "Structured lookups only",
+        subtitle: "Keyword search, tag filters, and exact-name lookups.",
         emptyTitle: "Waiting for a query",
         emptyBody: "This side answers only from explicit tool results.",
         loading: "Running tool lookups...",
       },
       semantic: {
         label: "Semantic Bot",
-        title: "Similarity search across the same dataset",
-        subtitle: "Uses embeddings to retrieve related evidence before answering.",
+        title: "Meaning-based retrieval",
+        subtitle: "Embeddings retrieve related evidence before the answer is drafted.",
         emptyTitle: "Waiting for a query",
         emptyBody: "This side ranks nearby meaning before drafting an answer.",
         loading: "Embedding the question and ranking evidence...",
@@ -69,7 +67,7 @@ export const uiCopy = {
     navBack: "Back to compare",
     title: "Semantic Map",
     intro:
-      "Explore where tickets, enhancements, incidents, and questions land in the same semantic space.",
+      "Project the active question into the same semantic space used by the Semantic Bot, then inspect the evidence around it.",
     status: {
       dataset: "Records",
       view: "View",
@@ -81,7 +79,6 @@ export const uiCopy = {
     controls: {
       question: "Question",
       suggested: "Suggested questions",
-      projection: "Projection",
       granularity: "Granularity",
       display: "Display",
       camera: "Camera",
@@ -120,7 +117,7 @@ export const uiCopy = {
         "Closer points usually represent closer meaning in the original embedding space.",
       projectionTitle: "Projection",
       projectionBody:
-        "PCA preserves broad structure. UMAP emphasizes local neighborhoods and cluster shape.",
+        "This view uses PCA, which preserves the broad structure of the embedding space.",
       granularityTitle: "Granularity",
       granularityBody:
         "Record, chunk, sentence, and field views change how much each source item is split into separate points.",
@@ -179,7 +176,7 @@ export function buildCompareMetric(
   toolMatches: number,
   semanticMatches: number,
 ) {
-  return `${toolMatches} exact hits / ${semanticMatches} semantic matches`;
+  return `Tool evidence ${toolMatches} / Semantic evidence ${semanticMatches}`;
 }
 
 export function formatEvidenceKind(kind: "support" | "enhancement" | "incident") {
@@ -232,15 +229,7 @@ export function formatTraceTone(tone: "neutral" | "success" | "warning") {
   return "Info";
 }
 
-export function getProjectionCopy(projection: EmbeddingProjection) {
-  if (projection === "umap") {
-    return {
-      detail:
-        "UMAP emphasizes local neighborhoods and cluster shape. Nearby groups matter more than the literal axis directions.",
-      title: "UMAP",
-    };
-  }
-
+export function getProjectionCopy() {
   return {
     detail:
       "PCA preserves broad structure across the dataset. The axes summarize the largest directions of variation.",

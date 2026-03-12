@@ -10,18 +10,15 @@ import type {
   EvidenceCard,
   TraceStep,
 } from "@/lib/demo-types";
-import {
-  buildCompareMetric,
-  formatEvidenceKind,
-  formatTraceTone,
-  uiCopy,
-} from "@/lib/ui-copy";
+import { formatEvidenceKind, formatTraceTone, uiCopy } from "@/lib/ui-copy";
 
 import styles from "./demo-app.module.css";
 
 type Turn = ComparePayload & {
   id: string;
 };
+
+const VISIBLE_EXAMPLES = exampleQueries.slice(0, 6);
 
 function EvidenceCluster({ items }: { items: EvidenceCard[] }) {
   if (!items.length) {
@@ -116,10 +113,8 @@ function BotPanel({
   return (
     <section className={panelClassName}>
       <header className={styles.panelHeader}>
-        <div>
-          <span className={styles.eyebrow}>{label}</span>
-          <h2>{title}</h2>
-        </div>
+        <span className={styles.eyebrow}>{label}</span>
+        <h2>{title}</h2>
         <p>{subtitle}</p>
       </header>
 
@@ -156,6 +151,7 @@ function BotPanel({
                 </div>
 
                 <pre className={styles.answerText}>{result.answer}</pre>
+
                 {result.limitation ? (
                   <p className={styles.limitation}>{result.limitation}</p>
                 ) : null}
@@ -183,16 +179,24 @@ export function DemoApp() {
   const [error, setError] = useState<string | null>(null);
 
   const latestTurn = turns[0];
-  const datasetSummary = `${datasetStats.support} support / ${datasetStats.enhancements} enhancements / ${datasetStats.incidents} incidents`;
-  const compareLine = useMemo(() => {
+  const corpusLine = `${datasetStats.support} support tickets, ${datasetStats.enhancements} enhancement candidates, ${datasetStats.incidents} incidents`;
+  const metricCards = useMemo(() => {
     if (!latestTurn) {
-      return uiCopy.comparePage.sections.compareBody;
+      return [
+        { label: "Tool evidence", value: "0" },
+        { label: "Semantic evidence", value: "0" },
+        { label: "Gap", value: "0" },
+      ];
     }
 
-    return buildCompareMetric(
-      latestTurn.dumb.retrieved.length,
-      latestTurn.smart.retrieved.length,
-    );
+    const toolCount = latestTurn.dumb.retrieved.length;
+    const semanticCount = latestTurn.smart.retrieved.length;
+
+    return [
+      { label: "Tool evidence", value: `${toolCount}` },
+      { label: "Semantic evidence", value: `${semanticCount}` },
+      { label: "Gap", value: `${Math.max(semanticCount - toolCount, 0)}` },
+    ];
   }, [latestTurn]);
 
   async function runQuery(nextQuery: string) {
@@ -253,31 +257,30 @@ export function DemoApp() {
           <p>{uiCopy.comparePage.hero.body}</p>
         </div>
 
-        <div className={styles.topActions}>
+        <div className={styles.headerSide}>
+          <p className={styles.datasetLine}>{uiCopy.comparePage.hero.datasetLine}</p>
           <Link className={styles.mapLink} href="/embedding-space">
             {uiCopy.comparePage.hero.cta}
           </Link>
-          <span className={styles.infoChip}>{uiCopy.comparePage.hero.datasetChip}</span>
-          <span className={styles.infoChip}>{datasetSummary}</span>
-          <span className={styles.infoChip}>{uiCopy.comparePage.hero.cacheChip}</span>
         </div>
       </header>
 
-      <section className={styles.controlStrip}>
-        <form className={styles.queryForm} onSubmit={handleSubmit}>
-          <div className={styles.formHeader}>
+      <section className={styles.launcherCard}>
+        <form className={styles.launcherForm} onSubmit={handleSubmit}>
+          <div className={styles.formIntro}>
             <div>
               <span className={styles.sectionLabel}>{uiCopy.comparePage.sections.askTitle}</span>
               <h2>{uiCopy.comparePage.sections.askBody}</h2>
             </div>
+            <p className={styles.contextLine}>{corpusLine}</p>
           </div>
 
-          <div className={styles.queryRow}>
+          <div className={styles.queryComposer}>
             <textarea
               className={styles.queryInput}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={uiCopy.comparePage.sections.questionPlaceholder}
-              rows={3}
+              rows={4}
               value={query}
             />
 
@@ -300,38 +303,46 @@ export function DemoApp() {
           </div>
 
           {error ? <p className={styles.requestError}>{error}</p> : null}
-        </form>
 
-        <div className={styles.exampleRail}>
-          <span className={styles.sectionLabel}>
-            {uiCopy.comparePage.sections.suggestedQuestionsTitle}
-          </span>
-          <div className={styles.exampleRow}>
-            {exampleQueries.map((exampleQuery) => (
-              <button
-                key={exampleQuery}
-                className={styles.exampleButton}
-                disabled={isLoading}
-                onClick={() => {
-                  setQuery(exampleQuery);
-                  void runQuery(exampleQuery);
-                }}
-                type="button"
-              >
-                {exampleQuery}
-              </button>
-            ))}
+          <div className={styles.suggestionBlock}>
+            <span className={styles.sectionLabel}>
+              {uiCopy.comparePage.sections.suggestedQuestionsTitle}
+            </span>
+            <div className={styles.suggestionGrid}>
+              {VISIBLE_EXAMPLES.map((exampleQuery) => (
+                <button
+                  key={exampleQuery}
+                  className={styles.exampleButton}
+                  disabled={isLoading}
+                  onClick={() => {
+                    setQuery(exampleQuery);
+                    void runQuery(exampleQuery);
+                  }}
+                  type="button"
+                >
+                  {exampleQuery}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        </form>
       </section>
 
-      <section className={styles.compareBanner}>
-        <div className={styles.compareCopy}>
+      <section className={styles.resultStrip}>
+        <div className={styles.resultNarrative}>
           <span className={styles.sectionLabel}>{uiCopy.comparePage.sections.compareLabel}</span>
           <h2>{latestTurn?.comparison.headline ?? uiCopy.comparePage.sections.compareTitle}</h2>
           <p>{latestTurn?.comparison.body ?? uiCopy.comparePage.sections.compareBody}</p>
         </div>
-        <div className={styles.compareMetric}>{compareLine}</div>
+
+        <div className={styles.metricGrid}>
+          {metricCards.map((card) => (
+            <article key={card.label} className={styles.metricCard}>
+              <span>{card.label}</span>
+              <strong>{card.value}</strong>
+            </article>
+          ))}
+        </div>
       </section>
 
       <section className={styles.panelGrid}>

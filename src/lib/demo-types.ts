@@ -1,7 +1,7 @@
 export type SourceKind = "support" | "enhancement" | "incident";
 export type EmbeddingMapKind = SourceKind | "query" | "centroid" | "example";
 export type EmbeddingGranularity = "record" | "chunk" | "sentence" | "field";
-export type EmbeddingProjection = "pca" | "umap";
+export type EmbeddingProjection = "pca";
 
 export interface SupportTicket {
   id: string;

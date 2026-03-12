@@ -5,17 +5,8 @@ import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { datasetStats, exampleQueries } from "@/data/demo-data";
-import type {
-  EmbeddingGranularity,
-  EmbeddingMapPayload,
-  EmbeddingProjection,
-} from "@/lib/demo-types";
-import {
-  formatMapKind,
-  getGranularityCopy,
-  getProjectionCopy,
-  uiCopy,
-} from "@/lib/ui-copy";
+import type { EmbeddingGranularity, EmbeddingMapPayload, EvidenceCard } from "@/lib/demo-types";
+import { formatMapKind, getGranularityCopy, getProjectionCopy, uiCopy } from "@/lib/ui-copy";
 
 import styles from "./embedding-space.module.css";
 
@@ -56,11 +47,18 @@ const AXIS_OPTIONS: Array<{ label: string; value: AxisPair }> = [
   { label: "YZ", value: "yz" },
 ];
 
+const VISIBLE_EXAMPLES = exampleQueries.slice(0, 6);
+
 interface QueryOptions {
   granularity?: EmbeddingGranularity;
-  projection?: EmbeddingProjection;
   showExampleQueries?: boolean;
   showCentroids?: boolean;
+}
+
+interface InsightSummary {
+  headline: string;
+  note: string;
+  takeaways: string[];
 }
 
 function formatCoordinate(value: number) {
@@ -71,6 +69,78 @@ function formatSimilarity(value?: number) {
   return typeof value === "number" ? value.toFixed(3) : null;
 }
 
+function humanizeTag(tag: string) {
+  return tag.replace(/-/g, " ");
+}
+
+function joinNatural(items: string[]) {
+  if (!items.length) {
+    return "";
+  }
+
+  if (items.length === 1) {
+    return items[0];
+  }
+
+  if (items.length === 2) {
+    return `${items[0]} and ${items[1]}`;
+  }
+
+  return `${items.slice(0, -1).join(", ")}, and ${items.at(-1)}`;
+}
+
+function pickTopTags(nearest: EvidenceCard[]) {
+  const counts = new Map<string, number>();
+
+  for (const item of nearest) {
+    for (const tag of item.tags) {
+      counts.set(tag, (counts.get(tag) ?? 0) + 1);
+    }
+  }
+
+  return Array.from(counts.entries())
+    .sort((left, right) => right[1] - left[1])
+    .slice(0, 3)
+    .map(([tag]) => humanizeTag(tag));
+}
+
+function buildInsightSummary(payload: EmbeddingMapPayload | null): InsightSummary | null {
+  if (!payload?.nearest.length) {
+    return null;
+  }
+
+  const nearest = payload.nearest;
+  const topTags = pickTopTags(nearest);
+  const topEnhancement = nearest.find((item) => item.kind === "enhancement");
+  const topSupport = nearest.find((item) => item.kind === "support");
+  const topIncident = nearest.find((item) => item.kind === "incident");
+  const topTagPair = joinNatural(topTags.slice(0, 2));
+
+  const headline = topEnhancement
+    ? topTagPair
+      ? `The query clusters around ${topTagPair} signals, with ${topEnhancement.title} as the clearest improvement response.`
+      : `The query lands near a consistent evidence cluster, with ${topEnhancement.title} as the clearest improvement response.`
+    : topTagPair
+      ? `The query lands near a tight ${topTagPair} neighborhood in the semantic space.`
+      : "The query lands near a tight neighborhood of semantically related evidence.";
+
+  const takeaways = [
+    topSupport ? `Top support signal: ${topSupport.title}` : null,
+    topIncident ? `Related incident signal: ${topIncident.title}` : null,
+    topEnhancement ? `Strongest linked improvement: ${topEnhancement.title}` : null,
+    topTags.length ? `Repeated themes in the nearest evidence: ${joinNatural(topTags)}.` : null,
+  ]
+    .filter((value): value is string => Boolean(value))
+    .slice(0, 3);
+
+  return {
+    headline,
+    note:
+      "This is why semantic retrieval matters here: the nearest records can describe the same underlying issue without reusing the same words.",
+    takeaways,
+  };
+}
+
 export function EmbeddingSpaceApp() {
   const mapCopy = uiCopy.semanticMapPage;
   const totalSourceRecords =
@@ -79,25 +149,23 @@ export function EmbeddingSpaceApp() {
   const [payload, setPayload] = useState<EmbeddingMapPayload | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [granularity, setGranularity] = useState<EmbeddingGranularity>("record");
-  const [projection, setProjection] = useState<EmbeddingProjection>("pca");
   const [displayMode, setDisplayMode] = useState<DisplayMode>("3d");
   const [axisPair, setAxisPair] = useState<AxisPair>("xy");
   const [cameraPreset, setCameraPreset] = useState<CameraPreset>("isometric");
   const [showCentroids, setShowCentroids] = useState(false);
-  const [showExampleQueries, setShowExampleQueries] = useState(true);
+  const [showExampleQueries, setShowExampleQueries] = useState(false);
   const [showLinks, setShowLinks] = useState(true);
-  const [autoRotate, setAutoRotate] = useState(true);
+  const [autoRotate, setAutoRotate] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
-  const [inspectorTab, setInspectorTab] = useState<InspectorTab>("selected");
+  const [inspectorTab, setInspectorTab] = useState<InspectorTab>("nearest");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isLoadingRef = useRef(false);
   const optionsRef = useRef({
     granularity: "record" as EmbeddingGranularity,
-    projection: "pca" as EmbeddingProjection,
     showCentroids: false,
-    showExampleQueries: true,
+    showExampleQueries: false,
   });
 
   useEffect(() => {
@@ -107,11 +175,10 @@ export function EmbeddingSpaceApp() {
   useEffect(() => {
     optionsRef.current = {
       granularity,
-      projection,
       showCentroids,
       showExampleQueries,
     };
-  }, [granularity, projection, showCentroids, showExampleQueries]);
+  }, [granularity, showCentroids, showExampleQueries]);
 
   const selectedNode = useMemo(() => {
     if (!payload) {
@@ -127,6 +194,8 @@ export function EmbeddingSpaceApp() {
     return payload.nodes.find((node) => node.id === preferredId) ?? null;
   }, [payload, selectedId]);
 
+  const insightSummary = useMemo(() => buildInsightSummary(payload), [payload]);
+
   const runQuery = useCallback(async (nextQuery: string, nextOptions?: QueryOptions) => {
     const trimmed = nextQuery.trim();
 
@@ -136,8 +205,6 @@ export function EmbeddingSpaceApp() {
 
     const resolvedGranularity =
       nextOptions?.granularity ?? optionsRef.current.granularity;
-    const resolvedProjection =
-      nextOptions?.projection ?? optionsRef.current.projection;
     const resolvedShowExampleQueries =
       nextOptions?.showExampleQueries ?? optionsRef.current.showExampleQueries;
     const resolvedShowCentroids =
@@ -148,7 +215,7 @@ export function EmbeddingSpaceApp() {
 
     try {
       const response = await fetch(
-        `/api/embedding-space?query=${encodeURIComponent(trimmed)}&granularity=${resolvedGranularity}&projection=${resolvedProjection}&centroids=${resolvedShowCentroids ? "1" : "0"}&examples=${resolvedShowExampleQueries ? "1" : "0"}`,
+        `/api/embedding-space?query=${encodeURIComponent(trimmed)}&granularity=${resolvedGranularity}&projection=pca&centroids=${resolvedShowCentroids ? "1" : "0"}&examples=${resolvedShowExampleQueries ? "1" : "0"}`,
       );
       const nextPayload = (await response.json()) as
         | EmbeddingMapPayload
@@ -161,7 +228,6 @@ export function EmbeddingSpaceApp() {
       setPayload(nextPayload);
       setQuery(trimmed);
       setGranularity(nextPayload.granularity);
-      setProjection(nextPayload.projection);
       setShowExampleQueries(nextPayload.exampleQueriesEnabled);
       setShowCentroids(nextPayload.centroidsEnabled);
       setSelectedId(
@@ -170,6 +236,7 @@ export function EmbeddingSpaceApp() {
           nextPayload.nodes[0]?.id ??
           null,
       );
+      setInspectorTab("nearest");
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
@@ -184,20 +251,14 @@ export function EmbeddingSpaceApp() {
   useEffect(() => {
     void runQuery(exampleQueries[0], {
       granularity: "record",
-      projection: "pca",
       showCentroids: false,
-      showExampleQueries: true,
+      showExampleQueries: false,
     });
   }, [runQuery]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     void runQuery(query);
-  }
-
-  function handleProjectionChange(nextProjection: EmbeddingProjection) {
-    setProjection(nextProjection);
-    void runQuery(query, { projection: nextProjection });
   }
 
   function handleGranularityChange(nextGranularity: EmbeddingGranularity) {
@@ -220,8 +281,8 @@ export function EmbeddingSpaceApp() {
     setInspectorTab(nextTab);
   }
 
-  const projectionCopy = getProjectionCopy(projection);
   const granularityCopy = getGranularityCopy(granularity);
+  const projectionCopy = getProjectionCopy();
   const selectionCoordinates = selectedNode
     ? `${formatCoordinate(selectedNode.x)} / ${formatCoordinate(selectedNode.y)} / ${formatCoordinate(selectedNode.z)}`
     : null;
@@ -231,13 +292,11 @@ export function EmbeddingSpaceApp() {
       ? mapCopy.status.queryReady
       : mapCopy.status.queryWaiting;
   const viewStatus = payload
-    ? `${projection.toUpperCase()} / ${granularity} / ${payload.stats.plottedPoints} pts`
-    : `${projection.toUpperCase()} / ${granularity}`;
-  const centroidSummary = payload?.centroidBreakdown.length
-    ? payload.centroidBreakdown
-        .map((entry) => `${entry.family} ${entry.count}`)
-        .join(" / ")
-    : null;
+    ? `PCA / ${granularity} / ${payload.stats.plottedPoints} pts`
+    : `PCA / ${granularity}`;
+  const mapStatusLine = payload
+    ? `${payload.stats.plottedPoints} plotted points across ${payload.stats.semanticPoints} semantic records.`
+    : "PCA projection of the local semantic corpus.";
 
   return (
     <main className={styles.shell}>
@@ -253,40 +312,75 @@ export function EmbeddingSpaceApp() {
           <p>{mapCopy.intro}</p>
         </div>
 
-        <div className={styles.headerActions}>
+        <div className={styles.headerMeta}>
           <span className={styles.infoChip}>
             {mapCopy.status.dataset}: {payload?.stats.sourceRecords ?? totalSourceRecords}
           </span>
-          <span className={styles.infoChip}>
-            {mapCopy.status.view}: {viewStatus}
-          </span>
+          <span className={styles.infoChip}>{viewStatus}</span>
           <span className={styles.infoChip}>
             {mapCopy.status.query}: {queryStatus}
           </span>
-          <button
-            className={styles.secondaryButton}
-            onClick={() => setShowHelp(true)}
-            type="button"
-          >
-            {mapCopy.controls.help}
-          </button>
         </div>
       </header>
 
       <section className={styles.controlStrip}>
         <form className={styles.queryPanel} onSubmit={handleSubmit}>
-          <div className={styles.fieldLabel}>{mapCopy.controls.question}</div>
-          <div className={styles.queryRow}>
+          <div className={styles.controlHeader}>
+            <div className={styles.controlLead}>
+              <span className={styles.fieldLabel}>{mapCopy.controls.question}</span>
+              <h2>Project a question into the retrieval space.</h2>
+            </div>
+
+            <div className={styles.controlActions}>
+              <label className={styles.selectWrap}>
+                <span className={styles.fieldLabel}>{mapCopy.controls.granularity}</span>
+                <select
+                  className={styles.selectField}
+                  disabled={isLoading}
+                  onChange={(event) =>
+                    handleGranularityChange(event.target.value as EmbeddingGranularity)
+                  }
+                  value={granularity}
+                >
+                  {GRANULARITY_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <button
+                className={styles.secondaryButton}
+                onClick={() => setShowSettings((current) => !current)}
+                type="button"
+              >
+                {showSettings ? mapCopy.controls.hideSettings : mapCopy.controls.moreSettings}
+              </button>
+
+              <button
+                className={styles.secondaryButton}
+                onClick={() => setShowHelp(true)}
+                type="button"
+              >
+                {mapCopy.controls.help}
+              </button>
+            </div>
+          </div>
+
+          <div className={styles.queryComposer}>
             <textarea
               className={styles.queryInput}
               onChange={(event) => setQuery(event.target.value)}
               rows={3}
               value={query}
             />
+
             <div className={styles.queryActions}>
               <button className={styles.primaryButton} disabled={isLoading} type="submit">
                 {isLoading ? "Projecting..." : mapCopy.controls.projectQuery}
               </button>
+              <p className={styles.contextNote}>{mapStatusLine}</p>
               {payload ? (
                 <span className={styles.infoChip}>
                   {mapCopy.detail.modelLabel}: {payload.model}
@@ -294,80 +388,33 @@ export function EmbeddingSpaceApp() {
               ) : null}
             </div>
           </div>
-          {error ? <p className={styles.requestError}>{error}</p> : null}
-        </form>
 
-        <div className={styles.filterStrip}>
-          <div className={styles.filterGroup}>
-            <span className={styles.fieldLabel}>{mapCopy.controls.projection}</span>
-            <div className={styles.segmentedRow}>
-              {(["pca", "umap"] as const).map((option) => (
+          {error ? <p className={styles.requestError}>{error}</p> : null}
+
+          <div className={styles.suggestionBlock}>
+            <span className={styles.fieldLabel}>{mapCopy.controls.suggested}</span>
+            <div className={styles.suggestionGrid}>
+              {VISIBLE_EXAMPLES.map((exampleQuery) => (
                 <button
-                  key={option}
-                  className={`${styles.toggleChip} ${projection === option ? styles.toggleChipActive : ""}`}
+                  key={exampleQuery}
+                  className={styles.exampleButton}
                   disabled={isLoading}
-                  onClick={() => handleProjectionChange(option)}
+                  onClick={() => {
+                    setQuery(exampleQuery);
+                    void runQuery(exampleQuery);
+                  }}
                   type="button"
                 >
-                  {option.toUpperCase()}
+                  {exampleQuery}
                 </button>
               ))}
             </div>
           </div>
-
-          <label className={styles.filterGroup}>
-            <span className={styles.fieldLabel}>{mapCopy.controls.granularity}</span>
-            <select
-              className={styles.selectField}
-              disabled={isLoading}
-              onChange={(event) =>
-                handleGranularityChange(event.target.value as EmbeddingGranularity)
-              }
-              value={granularity}
-            >
-              {GRANULARITY_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <div className={styles.filterActions}>
-            <button
-              className={styles.secondaryButton}
-              onClick={() => setShowSettings((current) => !current)}
-              type="button"
-            >
-              {showSettings ? mapCopy.controls.hideSettings : mapCopy.controls.moreSettings}
-            </button>
-          </div>
-        </div>
-
-        <div className={styles.exampleRail}>
-          <span className={styles.fieldLabel}>{mapCopy.controls.suggested}</span>
-          <div className={styles.exampleRow}>
-            {exampleQueries.map((exampleQuery) => (
-              <button
-                key={exampleQuery}
-                className={styles.exampleButton}
-                disabled={isLoading}
-                onClick={() => {
-                  setQuery(exampleQuery);
-                  void runQuery(exampleQuery);
-                  setInspectorTab("nearest");
-                }}
-                type="button"
-              >
-                {exampleQuery}
-              </button>
-            ))}
-          </div>
-        </div>
+        </form>
 
         {showSettings ? (
-          <div className={styles.advancedPanel}>
-            <div className={styles.advancedGroup}>
+          <section className={styles.settingsPanel}>
+            <div className={styles.settingsGroup}>
               <span className={styles.fieldLabel}>{mapCopy.controls.display}</span>
               <div className={styles.segmentedRow}>
                 {(["3d", "2d"] as const).map((option) => (
@@ -385,7 +432,7 @@ export function EmbeddingSpaceApp() {
               </div>
             </div>
 
-            <div className={styles.advancedGroup}>
+            <div className={styles.settingsGroup}>
               <span className={styles.fieldLabel}>
                 {displayMode === "3d" ? mapCopy.controls.camera : mapCopy.controls.plane}
               </span>
@@ -415,7 +462,7 @@ export function EmbeddingSpaceApp() {
               </div>
             </div>
 
-            <div className={styles.advancedGroup}>
+            <div className={styles.settingsGroup}>
               <span className={styles.fieldLabel}>{mapCopy.controls.overlays}</span>
               <div className={styles.toggleGrid}>
                 <label className={styles.checkboxRow}>
@@ -454,93 +501,125 @@ export function EmbeddingSpaceApp() {
                 </label>
               </div>
             </div>
-          </div>
+          </section>
         ) : null}
       </section>
 
       <section className={styles.workspace}>
-        <section className={styles.mapPanel}>
-          <div className={styles.mapToolbar}>
-            <div className={styles.legendRow}>
-              <span className={styles.legendItem}>
-                <i className={`${styles.legendDot} ${styles.supportDot}`} />
-                Support
-              </span>
-              <span className={styles.legendItem}>
-                <i className={`${styles.legendDot} ${styles.enhancementDot}`} />
-                Enhancement
-              </span>
-              <span className={styles.legendItem}>
-                <i className={`${styles.legendDot} ${styles.incidentDot}`} />
-                Incident
-              </span>
-              <span className={styles.legendItem}>
-                <i className={`${styles.legendDot} ${styles.centroidDot}`} />
-                Centroid
-              </span>
-              <span className={styles.legendItem}>
-                <i className={`${styles.legendDot} ${styles.exampleDot}`} />
-                Example
-              </span>
-              <span className={styles.legendItem}>
-                <i className={`${styles.legendDot} ${styles.queryDot}`} />
-                Query
-              </span>
-            </div>
-
-            <div className={styles.metaRow}>
-              {payload ? (
-                <span className={styles.infoChip}>
-                  {mapCopy.detail.plottedLabel}: {payload.stats.plottedPoints}
-                </span>
-              ) : null}
-              <span className={styles.infoChip}>
-                {projection.toUpperCase()} / {granularity}
-              </span>
-              {centroidSummary ? <span className={styles.infoChip}>{centroidSummary}</span> : null}
-            </div>
-          </div>
-
-          <div className={styles.viewerFrame}>
-            {payload ? (
-              <EmbeddingSpaceViewer
-                autoRotate={autoRotate}
-                axisPair={axisPair}
-                cameraPreset={cameraPreset}
-                displayMode={displayMode}
-                links={showLinks ? payload.links : []}
-                nodes={payload.nodes}
-                onSelect={(id) => handleSelectNode(id)}
-                selectedId={selectedNode?.id ?? null}
-              />
-            ) : (
-              <div className={styles.viewerFallback}>
-                <p>{isLoading ? mapCopy.viewer.loading : mapCopy.viewer.empty}</p>
+        <div className={styles.storyColumn}>
+          <section className={styles.insightCard}>
+            <div className={styles.insightHeader}>
+              <div>
+                <span className={styles.fieldLabel}>Insight summary</span>
+                <h2>
+                  {insightSummary?.headline ??
+                    "Project a question to explain which semantic neighborhood it lands in."}
+                </h2>
               </div>
-            )}
-          </div>
+              <span className={styles.infoChip}>{viewStatus}</span>
+            </div>
 
-          <div className={styles.viewerHint}>
-            <p>
-              {displayMode === "3d"
-                ? mapCopy.controls.viewerHint
-                : `${axisPair.toUpperCase()} plane. ${mapCopy.controls.planeHint}`}
+            <div className={styles.takeawayGrid}>
+              {(insightSummary?.takeaways.length
+                ? insightSummary.takeaways
+                : ["Nearest support, incident, and enhancement evidence will be summarized here."]
+              ).map((takeaway) => (
+                <article key={takeaway} className={styles.takeawayCard}>
+                  <span className={styles.fieldLabel}>Takeaway</span>
+                  <p>{takeaway}</p>
+                </article>
+              ))}
+            </div>
+
+            <p className={styles.insightNote}>
+              {insightSummary?.note ??
+                "This card turns the nearest semantic evidence into a short explanation before you inspect the map itself."}
             </p>
-          </div>
-        </section>
+          </section>
+
+          <section className={styles.mapPanel}>
+            <div className={styles.mapHeader}>
+              <div className={styles.legendRow}>
+                <span className={styles.legendItem}>
+                  <i className={`${styles.legendDot} ${styles.supportDot}`} />
+                  Support
+                </span>
+                <span className={styles.legendItem}>
+                  <i className={`${styles.legendDot} ${styles.enhancementDot}`} />
+                  Enhancement
+                </span>
+                <span className={styles.legendItem}>
+                  <i className={`${styles.legendDot} ${styles.incidentDot}`} />
+                  Incident
+                </span>
+                {showCentroids ? (
+                  <span className={styles.legendItem}>
+                    <i className={`${styles.legendDot} ${styles.centroidDot}`} />
+                    Centroid
+                  </span>
+                ) : null}
+                {showExampleQueries ? (
+                  <span className={styles.legendItem}>
+                    <i className={`${styles.legendDot} ${styles.exampleDot}`} />
+                    Example
+                  </span>
+                ) : null}
+                <span className={styles.legendItem}>
+                  <i className={`${styles.legendDot} ${styles.queryDot}`} />
+                  Query
+                </span>
+              </div>
+
+              <div className={styles.mapMeta}>
+                {payload ? (
+                  <span className={styles.infoChip}>
+                    {mapCopy.detail.plottedLabel}: {payload.stats.plottedPoints}
+                  </span>
+                ) : null}
+                <span className={styles.infoChip}>PCA</span>
+                <span className={styles.infoChip}>{granularity}</span>
+              </div>
+            </div>
+
+            <div className={styles.viewerFrame}>
+              {payload ? (
+                <EmbeddingSpaceViewer
+                  autoRotate={autoRotate}
+                  axisPair={axisPair}
+                  cameraPreset={cameraPreset}
+                  displayMode={displayMode}
+                  links={showLinks ? payload.links : []}
+                  nodes={payload.nodes}
+                  onSelect={(id) => handleSelectNode(id)}
+                  selectedId={selectedNode?.id ?? null}
+                />
+              ) : (
+                <div className={styles.viewerFallback}>
+                  <p>{isLoading ? mapCopy.viewer.loading : mapCopy.viewer.empty}</p>
+                </div>
+              )}
+            </div>
+
+            <div className={styles.viewerFooter}>
+              <p>
+                {displayMode === "3d"
+                  ? mapCopy.controls.viewerHint
+                  : `${axisPair.toUpperCase()} plane. ${mapCopy.controls.planeHint}`}
+              </p>
+            </div>
+          </section>
+        </div>
 
         <aside className={styles.inspector}>
           <div className={styles.inspectorHeader}>
-            <div>
-              <span className={styles.eyebrow}>{mapCopy.inspector.title}</span>
-              <h2>
-                {inspectorTab === "selected"
-                  ? mapCopy.inspector.selectedTitle
-                  : inspectorTab === "nearest"
-                    ? mapCopy.inspector.nearestTitle
-                    : mapCopy.inspector.examplesTitle}
-              </h2>
-            </div>
+            <span className={styles.eyebrow}>{mapCopy.inspector.title}</span>
+            <h2>
+              {inspectorTab === "selected"
+                ? mapCopy.inspector.selectedTitle
+                : inspectorTab === "nearest"
+                  ? mapCopy.inspector.nearestTitle
+                  : mapCopy.inspector.examplesTitle}
+            </h2>
           </div>
 
           <div className={styles.tabRow}>
@@ -589,7 +668,6 @@ export function EmbeddingSpaceApp() {
                       onClick={() => {
                         setQuery(selectedNode.title);
                         void runQuery(selectedNode.title);
-                        setInspectorTab("nearest");
                       }}
                       type="button"
                     >
@@ -636,12 +714,6 @@ export function EmbeddingSpaceApp() {
                       <div className={styles.metaCard}>
                         <span>{mapCopy.detail.segmentLabel}</span>
                         <strong>{selectedNode.segmentLabel}</strong>
-                      </div>
-                    ) : null}
-                    {typeof selectedNode.pointCount === "number" ? (
-                      <div className={styles.metaCard}>
-                        <span>{mapCopy.detail.pointCountLabel}</span>
-                        <strong>{selectedNode.pointCount}</strong>
                       </div>
                     ) : null}
                   </div>
@@ -703,7 +775,7 @@ export function EmbeddingSpaceApp() {
                       type="button"
                     >
                       {showExampleQueries
-                        ? "Hide example overlays"
+                        ? "Hide overlays"
                         : mapCopy.controls.showExampleQueries}
                     </button>
                   </div>
@@ -717,7 +789,6 @@ export function EmbeddingSpaceApp() {
                           onClick={() => {
                             setQuery(item.query);
                             void runQuery(item.query);
-                            setInspectorTab("nearest");
                           }}
                           type="button"
                         >
@@ -738,23 +809,19 @@ export function EmbeddingSpaceApp() {
                   <div className={styles.subsectionHeader}>
                     <h3>Saved prompts</h3>
                   </div>
-                  <div className={styles.listColumn}>
+                  <div className={styles.savedPromptGrid}>
                     {exampleQueries.map((exampleQuery) => (
                       <button
                         key={exampleQuery}
-                        className={styles.listButton}
+                        className={styles.promptButton}
                         disabled={isLoading}
                         onClick={() => {
                           setQuery(exampleQuery);
                           void runQuery(exampleQuery);
-                          setInspectorTab("nearest");
                         }}
                         type="button"
                       >
-                        <div>
-                          <strong>Saved prompt</strong>
-                          <p>{exampleQuery}</p>
-                        </div>
+                        {exampleQuery}
                       </button>
                     ))}
                   </div>
@@ -801,7 +868,7 @@ export function EmbeddingSpaceApp() {
               </article>
               <article className={styles.helpCard}>
                 <span className={styles.fieldLabel}>{mapCopy.help.projectionTitle}</span>
-                <p>{mapCopy.help.projectionBody}</p>
+                <p>{projectionCopy.detail}</p>
               </article>
               <article className={styles.helpCard}>
                 <span className={styles.fieldLabel}>{mapCopy.help.granularityTitle}</span>
@@ -811,16 +878,6 @@ export function EmbeddingSpaceApp() {
                 <span className={styles.fieldLabel}>{mapCopy.help.retrievalTitle}</span>
                 <p>{mapCopy.help.retrievalBody}</p>
               </article>
-            </div>
-
-            <div className={styles.modalFooter}>
-              <span className={styles.infoChip}>{projectionCopy.title}</span>
-              <span className={styles.infoChip}>{granularity}</span>
-              {payload ? (
-                <span className={styles.infoChip}>
-                  {payload.stats.plottedPoints} plotted points
-                </span>
-              ) : null}
             </div>
           </div>
         </div>

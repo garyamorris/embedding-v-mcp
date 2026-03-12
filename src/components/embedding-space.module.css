@@ -1,43 +1,50 @@
 .shell {
   display: grid;
-  gap: 16px;
+  gap: 18px;
   min-height: 100vh;
-  padding: 18px;
+  padding: 20px;
 }
 
 .topStrip,
 .controlStrip,
+.insightCard,
 .mapPanel,
 .inspector,
 .helpModal {
   border: 1px solid var(--line);
-  border-radius: 22px;
+  border-radius: 20px;
   background: var(--surface);
   box-shadow: var(--shadow-soft);
 }
 
 .topStrip {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 16px 18px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: end;
+  padding: 18px 20px;
 }
 
-.titleBlock {
+.titleBlock,
+.queryPanel,
+.controlLead,
+.settingsGroup,
+.insightCard,
+.mapPanel,
+.detailPanel,
+.examplesPanel,
+.examplesSection,
+.takeawayCard {
   display: grid;
-  gap: 8px;
-  max-width: 62ch;
+  gap: 10px;
 }
 
 .navRow,
-.headerActions,
+.headerMeta,
 .legendRow,
-.metaRow,
-.exampleRow,
+.mapMeta,
 .segmentedRow,
-.tagRow,
-.modalFooter {
+.tagRow {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -57,9 +64,39 @@
 .axisLabel {
   color: var(--ink-soft);
   font-family: var(--font-mono), monospace;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
+}
+
+.titleBlock h1,
+.controlLead h2,
+.insightHeader h2,
+.inspectorHeader h2,
+.detailHeader h3,
+.subsectionHeader h3,
+.modalHeader h2 {
+  color: var(--steel);
+}
+
+.titleBlock h1 {
+  font-size: clamp(1.54rem, 2vw, 2rem);
+  line-height: 1.05;
+}
+
+.titleBlock p,
+.contextNote,
+.requestError,
+.viewerFooter p,
+.detailSummary,
+.detailSnippet,
+.emptyState,
+.modalLead,
+.helpCard p,
+.takeawayCard p,
+.insightNote {
+  color: var(--ink-soft);
+  line-height: 1.58;
 }
 
 .backLink,
@@ -69,7 +106,9 @@
 .exampleButton,
 .toggleChip,
 .tabButton,
-.listButton {
+.listButton,
+.promptButton,
+.legendItem {
   transition:
     transform 160ms ease,
     border-color 160ms ease,
@@ -80,14 +119,12 @@
 .backLink,
 .infoChip,
 .secondaryButton,
-.exampleButton,
 .toggleChip,
 .tabButton,
 .listButton,
-.legendItem {
+.promptButton {
   border: 1px solid rgba(24, 37, 60, 0.1);
-  border-radius: 999px;
-  background: var(--surface-muted);
+  background: var(--surface-strong);
   color: var(--steel);
 }
 
@@ -96,9 +133,11 @@
 .primaryButton,
 .toggleChip,
 .tabButton {
-  padding: 10px 14px;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
   font-family: var(--font-mono), monospace;
-  font-size: 0.74rem;
+  font-size: 0.73rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -108,7 +147,8 @@
 .toggleChip,
 .tabButton,
 .exampleButton,
-.listButton {
+.listButton,
+.promptButton {
   cursor: pointer;
 }
 
@@ -118,38 +158,9 @@
 .toggleChip:hover:not(:disabled),
 .tabButton:hover,
 .exampleButton:hover:not(:disabled),
-.listButton:hover:not(:disabled) {
+.listButton:hover:not(:disabled),
+.promptButton:hover:not(:disabled) {
   transform: translateY(-1px);
-}
-
-.titleBlock h1,
-.inspectorHeader h2,
-.detailHeader h3,
-.subsectionHeader h3 {
-  color: var(--steel);
-}
-
-.titleBlock h1 {
-  font-size: clamp(1.32rem, 2.2vw, 1.78rem);
-  line-height: 1.08;
-}
-
-.titleBlock p,
-.requestError,
-.viewerHint p,
-.detailSummary,
-.detailSnippet,
-.emptyState,
-.modalLead,
-.helpCard p,
-.subsectionHeader p {
-  color: var(--ink-soft);
-  line-height: 1.58;
-}
-
-.headerActions {
-  align-items: start;
-  justify-content: flex-end;
 }
 
 .infoChip,
@@ -158,51 +169,76 @@
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
+  border-radius: 999px;
   font-family: var(--font-mono), monospace;
   font-size: 0.7rem;
   letter-spacing: 0.04em;
 }
 
+.headerMeta {
+  justify-content: flex-end;
+  align-content: start;
+}
+
 .controlStrip {
   display: grid;
-  gap: 12px;
-  padding: 14px;
+  gap: 14px;
+  padding: 18px 20px;
 }
 
-.queryPanel,
-.filterStrip,
-.advancedPanel {
-  display: grid;
-  gap: 10px;
-}
-
-.queryRow {
+.controlHeader {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
+  gap: 14px;
+  align-items: end;
+}
+
+.controlLead h2 {
+  font-size: 1rem;
+  line-height: 1.24;
+}
+
+.controlActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+  align-items: end;
+}
+
+.selectWrap {
+  display: grid;
+  gap: 8px;
+  min-width: 180px;
+}
+
+.queryComposer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 230px;
+  gap: 14px;
 }
 
 .queryInput,
 .selectField {
   border: 1px solid rgba(24, 37, 60, 0.12);
   border-radius: 16px;
-  background: #fffdf8;
+  background: var(--surface-strong);
   color: var(--steel);
 }
 
 .queryInput {
-  min-height: 94px;
-  padding: 12px 14px;
-  line-height: 1.55;
+  min-height: 112px;
+  padding: 14px 16px;
+  line-height: 1.58;
 }
 
 .selectField {
   width: 100%;
-  padding: 11px 12px;
+  min-height: 42px;
+  padding: 0 12px;
 }
 
-.queryActions,
-.filterActions {
+.queryActions {
   display: grid;
   gap: 10px;
   align-content: start;
@@ -210,65 +246,66 @@
 
 .primaryButton {
   border: 0;
-  border-radius: 999px;
-  padding: 12px 18px;
   background: var(--accent);
   color: #172033;
   cursor: pointer;
   font-weight: 600;
 }
 
-.exampleRail {
+.secondaryButton {
+  background: transparent;
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled,
+.exampleButton:disabled,
+.promptButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.suggestionBlock {
   display: grid;
-  gap: 8px;
-  border-top: 1px solid rgba(24, 37, 60, 0.08);
-  padding-top: 10px;
+  gap: 10px;
 }
 
-.exampleRow {
-  overflow-x: auto;
-  padding-bottom: 2px;
+.suggestionGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
 }
 
-.exampleButton {
-  flex: 0 0 auto;
-  max-width: 320px;
-  padding: 10px 12px;
-  font-size: 0.83rem;
-  line-height: 1.45;
+.exampleButton,
+.promptButton {
+  padding: 14px 15px;
+  border-radius: 18px;
+  font-size: 0.9rem;
+  line-height: 1.48;
   text-align: left;
 }
 
-.filterStrip {
-  grid-template-columns: repeat(3, minmax(0, auto));
-  gap: 12px;
-  align-items: end;
+.exampleButton {
+  border: 1px solid rgba(24, 37, 60, 0.1);
+  background: var(--surface-strong);
+  color: var(--steel);
 }
 
-.filterGroup {
+.settingsPanel {
   display: grid;
-  gap: 8px;
-}
-
-.toggleChip {
-  padding: 9px 12px;
-}
-
-.toggleChipActive,
-.tabButtonActive {
-  border-color: rgba(15, 157, 135, 0.34);
-  box-shadow: 0 8px 18px rgba(15, 157, 135, 0.08);
-  background: rgba(239, 255, 249, 0.94);
-}
-
-.advancedPanel {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
   border-top: 1px solid rgba(24, 37, 60, 0.08);
-  padding-top: 10px;
+  padding-top: 14px;
 }
 
-.advancedGroup,
+.toggleChipActive,
+.tabButtonActive,
+.listButtonActive {
+  border-color: rgba(15, 157, 135, 0.28);
+  box-shadow: 0 10px 18px rgba(15, 157, 135, 0.08);
+  background: rgba(243, 252, 248, 0.96);
+}
+
 .toggleGrid {
   display: grid;
   gap: 8px;
@@ -288,27 +325,63 @@
 
 .workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
-  gap: 16px;
-  align-items: stretch;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  gap: 18px;
+  align-items: start;
 }
 
-.mapPanel {
+.storyColumn {
   display: grid;
-  gap: 10px;
-  padding: 12px;
+  gap: 16px;
 }
 
-.mapToolbar {
+.insightCard,
+.mapPanel,
+.inspector {
+  padding: 16px;
+}
+
+.insightHeader,
+.mapHeader,
+.detailHeader,
+.subsectionHeader,
+.modalHeader {
   display: flex;
-  flex-wrap: wrap;
   justify-content: space-between;
+  gap: 12px;
+  align-items: start;
+}
+
+.insightHeader h2,
+.inspectorHeader h2,
+.detailHeader h3,
+.subsectionHeader h3 {
+  font-size: 1.02rem;
+  line-height: 1.28;
+}
+
+.takeawayGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
-  align-items: center;
+}
+
+.takeawayCard {
+  border: 1px solid rgba(24, 37, 60, 0.08);
+  border-radius: 16px;
+  padding: 12px;
+  background: var(--surface-strong);
+}
+
+.insightNote {
+  max-width: 74ch;
+  font-size: 0.92rem;
 }
 
 .legendItem {
-  padding: 7px 10px;
+  background: transparent;
+  border: 0;
+  padding: 0;
 }
 
 .legendDot {
@@ -341,19 +414,25 @@
   background: #18253c;
 }
 
+.mapHeader {
+  align-items: center;
+}
+
+.mapMeta {
+  justify-content: flex-end;
+}
+
 .viewerFrame {
   overflow: hidden;
   border: 1px solid rgba(24, 37, 60, 0.08);
   border-radius: 18px;
-  background:
-    radial-gradient(circle at top left, rgba(255, 204, 112, 0.12), transparent 28%),
-    linear-gradient(180deg, rgba(255, 252, 246, 0.98), rgba(249, 245, 237, 0.96));
+  background: linear-gradient(180deg, rgba(255, 253, 248, 0.98), rgba(247, 243, 236, 0.96));
 }
 
 .viewerCanvas,
 .viewerFallback {
   width: 100%;
-  height: clamp(500px, calc(100vh - 255px), 720px);
+  height: clamp(520px, calc(100vh - 315px), 740px);
 }
 
 .viewerCanvas {
@@ -367,26 +446,17 @@
   text-align: center;
 }
 
-.viewerHint {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: center;
-  min-height: 24px;
+.viewerFooter {
+  min-height: 20px;
 }
 
 .inspector {
+  position: sticky;
+  top: 20px;
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
-  gap: 10px;
-  height: clamp(500px, calc(100vh - 255px), 720px);
-  padding: 12px;
-}
-
-.inspectorHeader h2 {
-  margin-top: 6px;
-  font-size: 1rem;
-  line-height: 1.2;
+  gap: 12px;
+  max-height: calc(100vh - 40px);
 }
 
 .tabRow {
@@ -395,39 +465,14 @@
   gap: 8px;
 }
 
-.tabButton {
-  justify-content: center;
-}
-
 .inspectorBody {
   min-height: 0;
   overflow-y: auto;
-  padding-right: 4px;
-}
-
-.detailPanel,
-.examplesPanel,
-.examplesSection {
-  display: grid;
-  gap: 12px;
-}
-
-.detailHeader,
-.subsectionHeader {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  align-items: start;
+  padding-right: 2px;
 }
 
 .detailKind {
   margin-bottom: 6px;
-}
-
-.detailHeader h3,
-.subsectionHeader h3 {
-  font-size: 1rem;
-  line-height: 1.3;
 }
 
 .metaGrid {
@@ -440,7 +485,7 @@
   border: 1px solid rgba(24, 37, 60, 0.08);
   border-radius: 14px;
   padding: 10px 12px;
-  background: var(--surface-muted);
+  background: var(--surface-strong);
 }
 
 .metaCard span {
@@ -455,10 +500,6 @@
   line-height: 1.4;
 }
 
-.tagRow {
-  gap: 6px;
-}
-
 .tag {
   border-radius: 999px;
   padding: 7px 10px;
@@ -468,7 +509,8 @@
   font-size: 0.7rem;
 }
 
-.listColumn {
+.listColumn,
+.savedPromptGrid {
   display: grid;
   gap: 8px;
 }
@@ -491,7 +533,7 @@
 .listButton p {
   margin-top: 4px;
   color: var(--steel);
-  line-height: 1.5;
+  line-height: 1.48;
 }
 
 .listButton em {
@@ -501,14 +543,12 @@
   font-style: normal;
 }
 
-.listButtonActive {
-  border-color: rgba(15, 157, 135, 0.3);
-  box-shadow: 0 8px 18px rgba(15, 157, 135, 0.08);
+.listMeta {
+  white-space: nowrap;
 }
 
-.listMeta {
-  font-size: 0.7rem;
-  white-space: nowrap;
+.promptButton {
+  display: block;
 }
 
 .emptyState {
@@ -534,19 +574,6 @@
   padding: 16px;
 }
 
-.modalHeader {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: start;
-}
-
-.modalHeader h2 {
-  margin-top: 6px;
-  color: var(--steel);
-  font-size: 1.08rem;
-}
-
 .helpGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -559,7 +586,7 @@
   border: 1px solid rgba(24, 37, 60, 0.08);
   border-radius: 16px;
   padding: 12px;
-  background: var(--surface-muted);
+  background: var(--surface-strong);
 }
 
 .sceneLabel,
@@ -571,18 +598,18 @@
   display: inline-flex;
   align-items: center;
   border-radius: 999px;
-  padding: 6px 9px;
-  background: rgba(255, 251, 244, 0.94);
+  padding: 5px 9px;
+  background: rgba(255, 252, 246, 0.92);
   box-shadow: 0 8px 18px rgba(24, 37, 60, 0.08);
   color: var(--steel);
   font-family: var(--font-mono), monospace;
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 .sceneLabelActive {
-  border: 1px solid rgba(15, 157, 135, 0.26);
+  border: 1px solid rgba(15, 157, 135, 0.24);
 }
 
 .axisLabel {
@@ -592,9 +619,9 @@
   min-width: 22px;
   height: 22px;
   border-radius: 999px;
-  background: rgba(255, 253, 247, 0.84);
+  background: rgba(255, 253, 247, 0.82);
   box-shadow: 0 6px 14px rgba(24, 37, 60, 0.08);
-  font-size: 0.66rem;
+  font-size: 0.64rem;
 }
 
 .sceneTooltip {
@@ -605,7 +632,7 @@
   border: 1px solid rgba(24, 37, 60, 0.12);
   border-radius: 16px;
   background: rgba(255, 252, 246, 0.96);
-  box-shadow: 0 12px 22px rgba(24, 37, 60, 0.14);
+  box-shadow: 0 12px 22px rgba(24, 37, 60, 0.12);
 }
 
 .sceneTooltip span,
@@ -619,7 +646,7 @@
 
 .sceneTooltip strong {
   color: var(--steel);
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   line-height: 1.35;
 }
 
@@ -629,21 +656,27 @@
   }
 
   .inspector {
-    height: auto;
-    min-height: 0;
+    position: static;
+    max-height: none;
   }
 }
 
-@media (max-width: 960px) {
-  .queryRow,
-  .filterStrip,
-  .advancedPanel,
+@media (max-width: 980px) {
+  .topStrip,
+  .controlHeader,
+  .queryComposer,
+  .settingsPanel,
   .helpGrid {
     grid-template-columns: 1fr;
   }
 
-  .queryActions,
-  .filterActions {
+  .headerMeta,
+  .controlActions {
+    justify-content: flex-start;
+  }
+
+  .takeawayGrid,
+  .suggestionGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -659,31 +692,28 @@
 
   .topStrip,
   .controlStrip,
+  .insightCard,
   .mapPanel,
   .inspector,
   .helpModal {
     border-radius: 18px;
+    padding: 14px;
   }
 
-  .topStrip,
-  .controlStrip,
-  .mapPanel,
-  .inspector,
-  .helpModal {
-    padding: 14px;
+  .suggestionGrid,
+  .takeawayGrid,
+  .tabRow,
+  .helpGrid {
+    grid-template-columns: 1fr;
   }
 
   .viewerCanvas,
   .viewerFallback {
-    height: 420px;
+    height: 430px;
   }
 
-  .queryActions,
-  .filterActions,
-  .tabRow {
-    grid-template-columns: 1fr;
-  }
-
+  .insightHeader,
+  .mapHeader,
   .detailHeader,
   .subsectionHeader,
   .modalHeader {

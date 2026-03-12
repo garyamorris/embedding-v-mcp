@@ -30,7 +30,7 @@ interface SceneBounds {
   radius: number;
 }
 
-const SCENE_SCALE = 2.9;
+const SCENE_SCALE = 2.65;
 
 function easeInOutCubic(value: number) {
   if (value < 0.5) {
@@ -89,21 +89,21 @@ function getNodeLabel(node: EmbeddingMapNode) {
 function getNodeRadius(node: EmbeddingMapNode, isHighlighted: boolean) {
   let radius =
     node.kind === "query"
-      ? 0.18
+      ? 0.17
       : node.kind === "example"
-        ? 0.135
+        ? 0.126
         : node.kind === "centroid"
-          ? 0.135
+          ? 0.128
           : node.kind === "enhancement"
-            ? 0.118
+            ? 0.112
             : node.kind === "incident"
-              ? 0.112
-              : 0.11;
+              ? 0.108
+              : 0.104;
 
   if (isHighlighted) {
-    radius *= 1.14;
+    radius *= 1.12;
   } else if ((node.score ?? 0) >= 0.82) {
-    radius *= 1.08;
+    radius *= 1.05;
   }
 
   return radius;
@@ -315,11 +315,11 @@ function SceneGuides({
 }) {
   const [centerX, centerY, centerZ] = bounds.center;
   const extent = bounds.extent;
-  const frameColor = "#ded6ca";
+  const frameColor = "#e7dfd4";
   const axisColors = {
-    horizontal: "#e7a45a",
-    vertical: "#1e9d8a",
-    depth: "#4c77c9",
+    horizontal: "#e4a55d",
+    vertical: "#239784",
+    depth: "#5877bc",
   };
   const horizontalAxis = displayMode === "2d" && axisPair === "yz" ? "Y" : "X";
   const verticalAxis = displayMode === "2d"
@@ -353,12 +353,12 @@ function SceneGuides({
 
   return (
     <>
-      <ambientLight intensity={0.88} />
-      <directionalLight color="#fff7e8" intensity={1.18} position={[6, 7, 4]} />
-      <directionalLight color="#dbe8f2" intensity={0.26} position={[-5, -2, -6]} />
+      <ambientLight intensity={0.82} />
+      <directionalLight color="#fff7e8" intensity={1.02} position={[6, 7, 4]} />
+      <directionalLight color="#dbe8f2" intensity={0.22} position={[-5, -2, -6]} />
       {displayMode === "3d" ? (
         <gridHelper
-          args={[extent * 2.3, 10, "#e3dbcf", "#f0e9dd"]}
+          args={[extent * 2.2, 8, "#e6ddd1", "#f2eadf"]}
           position={[centerX, bounds.min[1] - extent * 0.34, centerZ]}
         />
       ) : (
@@ -373,7 +373,7 @@ function SceneGuides({
           color={frameColor}
           key={`frame-${index}`}
           lineWidth={1}
-          opacity={0.22}
+          opacity={0.14}
           points={points as [number, number, number][]}
           transparent
         />
@@ -381,8 +381,8 @@ function SceneGuides({
 
       <Line
         color={axisColors.horizontal}
-        lineWidth={1.1}
-        opacity={0.26}
+        lineWidth={1}
+        opacity={0.2}
         points={[
           [centerX - extent - 0.2, centerY, displayMode === "3d" ? centerZ : 0],
           [centerX + extent + 0.2, centerY, displayMode === "3d" ? centerZ : 0],
@@ -391,8 +391,8 @@ function SceneGuides({
       />
       <Line
         color={axisColors.vertical}
-        lineWidth={1.1}
-        opacity={0.24}
+        lineWidth={1}
+        opacity={0.19}
         points={[
           [centerX, centerY - extent - 0.2, displayMode === "3d" ? centerZ : 0],
           [centerX, centerY + extent + 0.2, displayMode === "3d" ? centerZ : 0],
@@ -402,8 +402,8 @@ function SceneGuides({
       {displayMode === "3d" ? (
         <Line
           color={axisColors.depth}
-          lineWidth={1.1}
-          opacity={0.2}
+          lineWidth={1}
+          opacity={0.16}
           points={[
             [centerX, centerY, centerZ - extent - 0.2],
             [centerX, centerY, centerZ + extent + 0.2],
@@ -503,9 +503,9 @@ function NodeMarker({
         <meshStandardMaterial
           color={color}
           emissive={color}
-          emissiveIntensity={isHighlighted ? 0.2 : 0.08}
-          metalness={0.16}
-          roughness={0.36}
+          emissiveIntensity={isHighlighted ? 0.18 : 0.06}
+          metalness={0.14}
+          roughness={0.42}
         />
       </mesh>
 
@@ -647,8 +647,8 @@ export function EmbeddingSpaceViewer({
             <Line
               color="#25324b"
               key={`${link.sourceId}:${link.targetId}`}
-              lineWidth={1.2 + link.score * 1.2}
-              opacity={0.08 + link.score * 0.22}
+              lineWidth={1 + link.score}
+              opacity={0.05 + link.score * 0.16}
               points={[source.position, target.position]}
               transparent
             />

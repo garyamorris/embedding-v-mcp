@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import type { EmbeddingGranularity, EmbeddingProjection } from "@/lib/demo-types";
+import type { EmbeddingGranularity } from "@/lib/demo-types";
 import { buildEmbeddingMapPayload } from "@/lib/embedding-space";
 
 export const runtime = "nodejs";
@@ -9,7 +9,6 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("query")?.trim() ?? "";
   const rawGranularity = searchParams.get("granularity");
-  const rawProjection = searchParams.get("projection");
   const rawCentroids = searchParams.get("centroids");
   const rawExamples = searchParams.get("examples");
   const granularity: EmbeddingGranularity =
@@ -18,8 +17,6 @@ export async function GET(request: Request) {
     rawGranularity === "field"
       ? rawGranularity
       : "record";
-  const projection: EmbeddingProjection =
-    rawProjection === "umap" ? "umap" : "pca";
   const showCentroids =
     rawCentroids === "1" || rawCentroids === "true" || rawCentroids === "on";
   const showExampleQueries =
@@ -28,7 +25,6 @@ export async function GET(request: Request) {
   try {
     const payload = await buildEmbeddingMapPayload({
       granularity,
-      projection,
       query,
       showExampleQueries,
       showCentroids,

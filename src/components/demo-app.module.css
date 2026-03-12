@@ -1,80 +1,110 @@
 .shell {
   display: grid;
-  gap: 16px;
+  gap: 18px;
   min-height: 100vh;
-  padding: 18px;
+  padding: 20px;
 }
 
 .topStrip,
-.controlStrip,
-.compareBanner,
+.launcherCard,
+.resultStrip,
 .botPanel {
   border: 1px solid var(--line);
-  border-radius: 22px;
+  border-radius: 20px;
   background: var(--surface);
   box-shadow: var(--shadow-soft);
 }
 
 .topStrip {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 16px 18px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 20px;
+  align-items: end;
+  padding: 18px 20px;
+}
+
+.titleBlock,
+.launcherForm,
+.formIntro,
+.resultNarrative,
+.panelHeader,
+.stream,
+.turnCard,
+.answerBubble,
+.traceBody,
+.evidenceCard,
+.metricCard {
+  display: grid;
+  gap: 8px;
 }
 
 .titleBlock {
-  display: grid;
-  gap: 8px;
-  max-width: 62ch;
+  max-width: 58ch;
 }
 
 .kicker,
 .eyebrow,
 .sectionLabel,
-.bubbleLabel {
+.bubbleLabel,
+.kindPill,
+.metricPill,
+.traceTone,
+.traceIndex,
+.metricCard span {
   color: var(--ink-soft);
   font-family: var(--font-mono), monospace;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
 .titleBlock h1 {
   color: var(--steel);
-  font-size: clamp(1.32rem, 2.2vw, 1.78rem);
-  line-height: 1.08;
+  font-size: clamp(1.56rem, 2.1vw, 2.05rem);
+  line-height: 1.05;
 }
 
 .titleBlock p,
+.datasetLine,
+.contextLine,
+.requestError,
+.resultNarrative p,
 .panelHeader p,
 .emptyState p,
 .loadingCard p,
 .answerText,
 .limitation,
 .traceBody p,
-.evidenceCard p,
-.compareCopy p,
-.requestError {
+.evidenceCard p {
   color: var(--ink-soft);
-  line-height: 1.6;
+  line-height: 1.58;
 }
 
-.topActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: start;
-  justify-content: flex-end;
+.headerSide {
+  display: grid;
+  gap: 10px;
+  justify-items: end;
+  align-content: start;
+  max-width: 320px;
+}
+
+.datasetLine {
+  font-size: 0.9rem;
+  text-align: right;
 }
 
 .mapLink,
-.infoChip,
 .primaryButton,
 .secondaryButton,
-.exampleButton {
+.exampleButton,
+.resultPill,
+.errorPill,
+.kindPill,
+.metricPill,
+.traceTone {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   border-radius: 999px;
   transition:
     transform 160ms ease,
@@ -84,39 +114,22 @@
 }
 
 .mapLink,
-.infoChip,
-.secondaryButton,
-.exampleButton,
-.resultPill,
-.errorPill,
-.kindPill,
-.metricPill,
-.traceTone,
-.traceIndex {
-  font-family: var(--font-mono), monospace;
-}
-
-.mapLink,
-.infoChip,
 .secondaryButton,
 .exampleButton {
   border: 1px solid rgba(24, 37, 60, 0.1);
-  background: var(--surface-muted);
+  background: var(--surface-strong);
   color: var(--steel);
 }
 
 .mapLink,
+.primaryButton,
 .secondaryButton {
-  padding: 10px 14px;
-  font-size: 0.74rem;
+  min-height: 42px;
+  padding: 0 16px;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.73rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-}
-
-.infoChip {
-  padding: 8px 10px;
-  font-size: 0.7rem;
-  letter-spacing: 0.04em;
 }
 
 .mapLink:hover,
@@ -126,39 +139,48 @@
   transform: translateY(-1px);
 }
 
-.controlStrip {
-  display: grid;
-  gap: 12px;
-  padding: 14px;
+.launcherCard {
+  padding: 18px 20px;
 }
 
-.queryForm,
-.exampleRail {
-  display: grid;
-  gap: 10px;
+.formIntro {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 14px;
 }
 
-.formHeader h2 {
+.formIntro h2,
+.resultNarrative h2,
+.panelHeader h2 {
   color: var(--steel);
-  font-size: 0.98rem;
+}
+
+.formIntro h2 {
+  font-size: 1rem;
   line-height: 1.3;
 }
 
-.queryRow {
+.contextLine {
+  max-width: 34ch;
+  font-size: 0.9rem;
+  text-align: right;
+}
+
+.queryComposer {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) 208px;
+  gap: 14px;
   align-items: stretch;
 }
 
 .queryInput {
-  min-height: 94px;
+  min-height: 116px;
   border: 1px solid rgba(24, 37, 60, 0.12);
   border-radius: 16px;
-  padding: 12px 14px;
-  background: #fffdf8;
+  padding: 14px 16px;
+  background: var(--surface-strong);
   color: var(--steel);
-  line-height: 1.55;
+  line-height: 1.58;
 }
 
 .queryActions {
@@ -167,23 +189,17 @@
   align-content: start;
 }
 
-.primaryButton,
-.secondaryButton {
-  justify-content: center;
-  cursor: pointer;
-}
-
 .primaryButton {
   border: 0;
-  padding: 12px 18px;
   background: var(--accent);
   color: #172033;
+  cursor: pointer;
   font-weight: 600;
 }
 
 .secondaryButton {
-  padding: 11px 16px;
   background: transparent;
+  cursor: pointer;
 }
 
 .primaryButton:disabled,
@@ -193,164 +209,120 @@
   opacity: 0.55;
 }
 
-.exampleRail {
-  border-top: 1px solid rgba(24, 37, 60, 0.08);
-  padding-top: 10px;
+.suggestionBlock {
+  display: grid;
+  gap: 10px;
+  padding-top: 4px;
 }
 
-.exampleRow {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  padding-bottom: 2px;
+.suggestionGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .exampleButton {
-  flex: 0 0 auto;
-  max-width: 360px;
-  padding: 10px 12px;
+  padding: 14px 15px;
+  border-radius: 18px;
   cursor: pointer;
-  font-size: 0.84rem;
-  line-height: 1.45;
+  font-size: 0.92rem;
+  line-height: 1.48;
   text-align: left;
 }
 
-.compareBanner {
+.resultStrip {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 14px;
-  align-items: center;
-  padding: 14px 16px;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 18px;
+  align-items: stretch;
+  padding: 18px 20px;
 }
 
-.compareCopy {
+.resultNarrative h2 {
+  font-size: 1.08rem;
+  line-height: 1.24;
+}
+
+.metricGrid {
   display: grid;
-  gap: 6px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
 }
 
-.compareCopy h2 {
-  color: var(--steel);
-  font-size: 1rem;
-  line-height: 1.28;
-}
-
-.compareMetric {
-  min-width: 180px;
-  border: 1px solid rgba(24, 37, 60, 0.1);
+.metricCard {
+  border: 1px solid rgba(24, 37, 60, 0.08);
   border-radius: 16px;
-  padding: 12px 14px;
-  background: var(--surface-muted);
+  padding: 14px;
+  background: var(--surface-strong);
+}
+
+.metricCard strong {
   color: var(--steel);
-  font-family: var(--font-mono), monospace;
-  font-size: 0.76rem;
-  line-height: 1.45;
-  text-align: right;
+  font-size: 1.5rem;
+  line-height: 1;
 }
 
 .panelGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 18px;
 }
 
 .botPanel {
-  display: grid;
-  gap: 14px;
-  padding: 16px;
-  min-height: 620px;
+  padding: 18px;
+  min-height: 440px;
 }
 
 .toolPanel {
-  background: linear-gradient(180deg, #18314e, #13253a);
-  color: #eef3f7;
+  background:
+    linear-gradient(180deg, rgba(233, 239, 247, 0.96), rgba(226, 235, 245, 0.92)),
+    var(--surface);
 }
 
 .semanticPanel {
   background:
-    radial-gradient(circle at top right, rgba(15, 157, 135, 0.12), transparent 26%),
+    linear-gradient(180deg, rgba(246, 250, 246, 0.96), rgba(239, 247, 241, 0.92)),
     var(--surface);
-  color: var(--steel);
-}
-
-.toolPanel .eyebrow,
-.toolPanel .panelHeader p,
-.toolPanel .panelHeader h2,
-.toolPanel .emptyState h3,
-.toolPanel .emptyState p,
-.toolPanel .bubbleLabel,
-.toolPanel .limitation,
-.toolPanel .sectionLabel,
-.toolPanel .traceBody p,
-.toolPanel .traceBody h4,
-.toolPanel .traceDetail,
-.toolPanel .answerText,
-.toolPanel .metricPill,
-.toolPanel .kindPill,
-.toolPanel .tagLine,
-.toolPanel .evidenceCard p,
-.toolPanel .evidenceCard h4,
-.toolPanel .userBubble p {
-  color: inherit;
-}
-
-.toolPanel .userBubble,
-.toolPanel .answerBubble,
-.toolPanel .emptyState,
-.toolPanel .loadingCard,
-.toolPanel .evidenceCard,
-.toolPanel .traceDisclosure {
-  border-color: rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.toolPanel .resultPill,
-.toolPanel .metricPill,
-.toolPanel .kindPill,
-.toolPanel .traceIndex {
-  background: rgba(255, 255, 255, 0.08);
-  color: inherit;
 }
 
 .panelHeader {
-  display: grid;
-  gap: 6px;
+  padding-bottom: 6px;
 }
 
 .panelHeader h2 {
-  margin-top: 6px;
-  font-size: 1.06rem;
+  font-size: 1.04rem;
   line-height: 1.22;
 }
 
 .stream {
-  display: grid;
-  gap: 12px;
   align-content: start;
 }
 
 .emptyState,
 .loadingCard,
-.turnCard {
-  border-radius: 18px;
+.userBubble,
+.answerBubble,
+.traceDisclosure,
+.evidenceCard {
+  border: 1px solid rgba(24, 37, 60, 0.09);
+  border-radius: 16px;
+  background: rgba(255, 253, 248, 0.88);
 }
 
 .emptyState {
-  border: 1px dashed rgba(24, 37, 60, 0.16);
   padding: 16px;
 }
 
 .emptyState h3 {
-  margin-bottom: 6px;
-  font-size: 0.96rem;
+  color: var(--steel);
+  font-size: 0.98rem;
 }
 
 .loadingCard {
   display: flex;
   gap: 12px;
   align-items: center;
-  border: 1px solid rgba(24, 37, 60, 0.12);
-  padding: 14px;
-  background: var(--surface-muted);
+  padding: 14px 16px;
 }
 
 .loadingPulse {
@@ -358,46 +330,29 @@
   height: 10px;
   border-radius: 999px;
   background: linear-gradient(135deg, #ffd36e, #0f9d87);
-  animation: pulse 1.3s ease-in-out infinite;
-}
-
-.turnCard {
-  display: grid;
-  gap: 10px;
-}
-
-.userBubble,
-.answerBubble,
-.traceDisclosure,
-.evidenceCard {
-  border: 1px solid rgba(24, 37, 60, 0.1);
-  border-radius: 16px;
-  background: var(--surface-muted);
+  animation: pulse 1.2s ease-in-out infinite;
 }
 
 .userBubble {
   padding: 12px 14px;
 }
 
-.bubbleLabel {
-  display: inline-block;
-  margin-bottom: 6px;
-}
-
 .userBubble p {
-  line-height: 1.55;
+  color: var(--steel);
+  line-height: 1.56;
 }
 
 .answerBubble {
-  display: grid;
-  gap: 12px;
   padding: 14px;
 }
 
-.answerMeta {
+.answerMeta,
+.evidenceMeta,
+.traceHeader {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  align-items: center;
 }
 
 .resultPill,
@@ -405,11 +360,8 @@
 .kindPill,
 .metricPill,
 .traceTone {
-  display: inline-flex;
-  align-items: center;
-  border-radius: 999px;
   padding: 5px 9px;
-  font-size: 0.68rem;
+  font-size: 0.67rem;
   letter-spacing: 0.04em;
 }
 
@@ -439,7 +391,11 @@
   white-space: pre-wrap;
   font-family: inherit;
   font-size: 0.92rem;
-  line-height: 1.6;
+  line-height: 1.62;
+}
+
+.limitation {
+  font-size: 0.9rem;
 }
 
 .evidenceGrid {
@@ -448,35 +404,21 @@
 }
 
 .evidenceCard {
-  display: grid;
-  gap: 6px;
   padding: 12px;
-}
-
-.evidenceMeta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.kindPill,
-.metricPill {
-  background: rgba(24, 37, 60, 0.08);
-  color: var(--ink-soft);
 }
 
 .evidenceCard h4,
 .traceHeader h4 {
   color: var(--steel);
   font-size: 0.92rem;
-  line-height: 1.35;
+  line-height: 1.34;
 }
 
 .tagLine {
   color: var(--ink-soft);
   font-family: var(--font-mono), monospace;
-  font-size: 0.72rem;
-  letter-spacing: 0.04em;
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
 }
 
 .traceDisclosure {
@@ -486,7 +428,8 @@
 .traceDisclosure summary {
   cursor: pointer;
   list-style: none;
-  padding: 12px 14px;
+  padding: 11px 14px;
+  color: var(--steel);
   font-weight: 600;
 }
 
@@ -513,53 +456,46 @@
   height: 22px;
   border-radius: 999px;
   background: rgba(24, 37, 60, 0.08);
-  color: var(--ink-soft);
-  font-size: 0.68rem;
-}
-
-.traceBody {
-  display: grid;
-  gap: 6px;
-}
-
-.traceHeader {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
 }
 
 @keyframes pulse {
   0%,
   100% {
-    transform: scale(0.9);
-    opacity: 0.6;
+    transform: scale(0.92);
+    opacity: 0.62;
   }
 
   50% {
-    transform: scale(1.15);
+    transform: scale(1.14);
     opacity: 1;
   }
 }
 
-@media (max-width: 1120px) {
-  .compareBanner,
+@media (max-width: 1180px) {
+  .resultStrip,
   .panelGrid {
     grid-template-columns: 1fr;
   }
 
-  .compareMetric {
-    min-width: 0;
-    text-align: left;
+  .metricGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 900px) {
-  .queryRow {
+@media (max-width: 980px) {
+  .topStrip,
+  .formIntro,
+  .queryComposer {
     grid-template-columns: 1fr;
   }
 
-  .queryActions {
+  .headerSide,
+  .contextLine {
+    justify-items: start;
+    text-align: left;
+  }
+
+  .suggestionGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -570,17 +506,16 @@
   }
 
   .topStrip,
-  .controlStrip,
-  .compareBanner,
+  .launcherCard,
+  .resultStrip,
   .botPanel {
     border-radius: 18px;
+    padding: 14px;
   }
 
-  .topStrip,
-  .controlStrip,
-  .compareBanner,
-  .botPanel {
-    padding: 14px;
+  .suggestionGrid,
+  .metricGrid {
+    grid-template-columns: 1fr;
   }
 
   .queryActions {
