@@ -1,120 +1,13 @@
-import { enhancementCandidates, incidentSummaries, supportTickets } from "@/data/demo-data";
 import type { BotResult, EvidenceCard, TraceStep } from "@/lib/demo-types";
 import { EMBEDDING_MODEL, RESPONSE_MODEL, getOpenAIClient } from "@/lib/openai";
-
-type EmbeddedRecord = EvidenceCard & {
-  embedding: number[];
-  searchableText: string;
-};
-
-const corpusRecords: Omit<EmbeddedRecord, "embedding">[] = [
-  ...supportTickets.map((ticket) => ({
-    id: ticket.id,
-    kind: "support" as const,
-    title: ticket.subject,
-    summary: ticket.summary,
-    snippet: ticket.body,
-    tags: ticket.tags,
-    searchableText: [
-      "support ticket",
-      `subject: ${ticket.subject}`,
-      `customer: ${ticket.customer}`,
-      `summary: ${ticket.summary}`,
-      `body: ${ticket.body}`,
-      `tags: ${ticket.tags.join(", ")}`,
-    ].join("\n"),
-  })),
-  ...enhancementCandidates.map((candidate) => ({
-    id: candidate.id,
-    kind: "enhancement" as const,
-    title: candidate.name,
-    summary: candidate.summary,
-    snippet: candidate.description,
-    tags: candidate.tags,
-    searchableText: [
-      "enhancement candidate",
-      `name: ${candidate.name}`,
-      `summary: ${candidate.summary}`,
-      `description: ${candidate.description}`,
-      `signals: ${candidate.linkedSignals.join(", ")}`,
-      `tags: ${candidate.tags.join(", ")}`,
-    ].join("\n"),
-  })),
-  ...incidentSummaries.map((incident) => ({
-    id: incident.id,
-    kind: "incident" as const,
-    title: incident.title,
-    summary: incident.summary,
-    snippet: incident.details,
-    tags: incident.tags,
-    searchableText: [
-      "incident summary",
-      `title: ${incident.title}`,
-      `date: ${incident.date}`,
-      `summary: ${incident.summary}`,
-      `details: ${incident.details}`,
-      `tags: ${incident.tags.join(", ")}`,
-    ].join("\n"),
-  })),
-];
-
-let embeddedCorpusPromise: Promise<EmbeddedRecord[]> | null = null;
-
-function stripEmbeddedRecord(record: EmbeddedRecord & { score: number }): EvidenceCard {
-  return {
-    id: record.id,
-    kind: record.kind,
-    title: record.title,
-    summary: record.summary,
-    snippet: record.snippet,
-    tags: record.tags,
-    score: record.score,
-    matchedKeywords: record.matchedKeywords,
-  };
-}
-
-function cosineSimilarity(left: number[], right: number[]) {
-  let dot = 0;
-  let leftNorm = 0;
-  let rightNorm = 0;
-
-  for (let index = 0; index < left.length; index += 1) {
-    dot += left[index] * right[index];
-    leftNorm += left[index] * left[index];
-    rightNorm += right[index] * right[index];
-  }
-
-  if (!leftNorm || !rightNorm) {
-    return 0;
-  }
-
-  return dot / (Math.sqrt(leftNorm) * Math.sqrt(rightNorm));
-}
-
-function roundScore(value: number) {
-  return Math.round(value * 1000) / 1000;
-}
-
-async function getEmbeddedCorpus() {
-  if (!embeddedCorpusPromise) {
-    embeddedCorpusPromise = buildEmbeddedCorpus();
-  }
-
-  return embeddedCorpusPromise;
-}
-
-async function buildEmbeddedCorpus() {
-  const client = getOpenAIClient();
-  const response = await client.embeddings.create({
-    model: EMBEDDING_MODEL,
-    input: corpusRecords.map((record) => record.searchableText),
-  });
-
-  return corpusRecords.map((record, index) => ({
-    ...record,
-    embedding: response.data[index].embedding,
-  }));
-}
+import {
+  cosineSimilarity,
+  getEmbeddedCorpus,
+  getQueryEmbedding,
+  roundScore,
+  stripEmbeddedRecord,
+} from "@/lib/semantic-corpus";
+import { uiCopy } from "@/lib/ui-copy";
 
 async function generateAnswer(
   query: string,
@@ -159,7 +52,7 @@ async function generateAnswer(
         content: [
           {
             type: "input_text",
-            text: "You are the Smart Bot in a demo that contrasts literal retrieval with embedding-based retrieval. Use only the supplied evidence. Make cross-record connections, explain implied improvements, and keep the answer concise. Return two short paragraphs followed by a heading 'Priority improvements' and up to three bullet points.",
+            text: "You are Semantic Bot in a demo that compares tool-based retrieval with semantic retrieval. Use only the supplied evidence. Make cross-record connections, explain implied improvements, and keep the answer concise. Return two short paragraphs followed by a heading 'Priority improvements' and up to three bullet points.",
           },
         ],
       },
@@ -179,16 +72,10 @@ async function generateAnswer(
 }
 
 export async function runSmartBot(query: string): Promise<BotResult> {
-  const client = getOpenAIClient();
-  const [queryEmbeddingResponse, corpus] = await Promise.all([
-    client.embeddings.create({
-      model: EMBEDDING_MODEL,
-      input: query,
-    }),
+  const [queryEmbedding, corpus] = await Promise.all([
+    getQueryEmbedding(query),
     getEmbeddedCorpus(),
   ]);
-
-  const queryEmbedding = queryEmbeddingResponse.data[0].embedding;
   const ranked = corpus
     .map((record) => ({
       ...record,
@@ -218,40 +105,40 @@ export async function runSmartBot(query: string): Promise<BotResult> {
 
   const trace: TraceStep[] = [
     {
-      title: "User query",
-      summary: "Took the same question, but treated it as a meaning-search problem instead of a keyword-search problem.",
+      title: uiCopy.traces.semantic.question,
+      summary: "Took the same question, but treated it as a similarity-search problem instead of an exact-match search.",
       detail: query,
     },
     {
-      title: "Query embedding step",
+      title: uiCopy.traces.semantic.embedding,
       summary: `Embedded the query with ${EMBEDDING_MODEL}.`,
       detail:
         "The query vector is compared against the local support, enhancement, and incident corpus.",
       tone: "success",
     },
     {
-      title: "Similarity search over support items",
+      title: uiCopy.traces.semantic.similarityRanking,
       summary: `Ranked ${corpus.length} local records by cosine similarity and kept the closest evidence.`,
       items: ranked.slice(0, 5).map(stripEmbeddedRecord),
       tone: "success",
     },
     {
-      title: "Matching enhancement candidates",
+      title: uiCopy.traces.semantic.relatedImprovements,
       summary:
-        "Retrieved improvement ideas by semantic proximity, even though the query did not need to mention them by name.",
+        "Retrieved related improvement ideas by semantic proximity, even when they were not named directly.",
       items: enhancementEvidence,
       tone: "success",
     },
     {
-      title: "Retrieved evidence",
+      title: uiCopy.traces.semantic.evidenceSet,
       summary: `Prepared ${retrieved.length} pieces of evidence across support tickets, enhancement candidates, and incidents.`,
       items: retrieved,
       tone: "success",
     },
     {
-      title: "Final answer",
+      title: uiCopy.traces.semantic.answer,
       summary:
-        "Generated a response from the retrieved evidence, focusing on root causes and implied improvements.",
+        "Generated a response from the retrieved evidence.",
       tone: "success",
     },
   ];
@@ -259,9 +146,9 @@ export async function runSmartBot(query: string): Promise<BotResult> {
   return {
     mode: "smart",
     answer,
-    verdict: "Semantic retrieval connected related evidence across different wording.",
+    verdict: "Similarity-based retrieval connected related evidence across different wording.",
     limitation:
-      "The Smart Bot is still bounded by the local demo dataset, but it can cluster meaning and implied fixes much better than literal tools.",
+      "This path is still limited to the local demo dataset, but it can group related issues and implied improvements from nearby matches.",
     retrieved,
     trace,
   };
@@ -271,7 +158,7 @@ export function buildSmartBotError(error: unknown): BotResult {
   const message =
     error instanceof Error
       ? error.message
-      : "The Smart Bot could not complete the semantic retrieval run.";
+      : "The Semantic Bot could not complete the retrieval run.";
   const nestedCode =
     error instanceof Error &&
     typeof error.cause === "object" &&
@@ -288,20 +175,20 @@ export function buildSmartBotError(error: unknown): BotResult {
     return {
       mode: "smart",
       answer:
-        "The Smart Bot could not run because the OpenAI-backed semantic retrieval path is not fully configured.",
-      verdict: "Semantic path unavailable.",
+        "The Semantic Bot could not start because the model configuration is incomplete.",
+      verdict: uiCopy.labels.setupIssue,
       limitation:
-        "Set OPENAI_API_KEY in .env.local to enable embeddings and model-based synthesis for the Smart Bot.",
+        "Set OPENAI_API_KEY in .env.local to enable embeddings and model-based synthesis for the Semantic Bot.",
       error: message,
-      errorLabel: "Config issue",
+      errorLabel: uiCopy.labels.setupIssue,
       retrieved: [],
       trace: [
         {
-          title: "User query",
-          summary: "The request reached the Smart Bot.",
+          title: uiCopy.traces.semantic.question,
+          summary: "The request reached the Semantic Bot.",
         },
         {
-          title: "Query embedding step",
+          title: uiCopy.traces.semantic.embedding,
           summary: "The embedding call could not be completed.",
           detail: message,
           tone: "warning",
@@ -317,19 +204,19 @@ export function buildSmartBotError(error: unknown): BotResult {
     return {
       mode: "smart",
       answer:
-        "The Smart Bot could not reach the OpenAI API because Node rejected the local TLS certificate chain.",
-      verdict: "TLS connection issue.",
+        "The Semantic Bot could not reach the OpenAI API because Node rejected the local TLS certificate chain.",
+      verdict: uiCopy.labels.tlsIssue,
       limitation: detail,
       error: `${message}${nestedCode ? ` (${nestedCode})` : ""}`,
-      errorLabel: "TLS issue",
+      errorLabel: uiCopy.labels.tlsIssue,
       retrieved: [],
       trace: [
         {
-          title: "User query",
-          summary: "The request reached the Smart Bot.",
+          title: uiCopy.traces.semantic.question,
+          summary: "The request reached the Semantic Bot.",
         },
         {
-          title: "Query embedding step",
+          title: uiCopy.traces.semantic.embedding,
           summary: "The OpenAI request failed before embeddings were returned.",
           detail,
           tone: "warning",
@@ -341,20 +228,20 @@ export function buildSmartBotError(error: unknown): BotResult {
   return {
     mode: "smart",
     answer:
-      "The Smart Bot could not reach the OpenAI API, so semantic retrieval could not complete.",
-    verdict: "Connection issue.",
+      "The Semantic Bot could not reach the OpenAI API, so semantic retrieval could not complete.",
+    verdict: uiCopy.labels.connectionIssue,
     limitation:
       "The server could not complete the outbound OpenAI request. Expand the trace to see the exact connection error.",
     error: message,
-    errorLabel: "Connection issue",
+    errorLabel: uiCopy.labels.connectionIssue,
     retrieved: [],
     trace: [
       {
-        title: "User query",
-        summary: "The request reached the Smart Bot.",
+        title: uiCopy.traces.semantic.question,
+        summary: "The request reached the Semantic Bot.",
       },
       {
-        title: "Query embedding step",
+        title: uiCopy.traces.semantic.embedding,
         summary: "The embedding call could not be completed.",
         detail: message,
         tone: "warning",

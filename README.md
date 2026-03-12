@@ -54,6 +54,8 @@ If you are running inside the Codex desktop terminal on Windows, use this instea
 
 That terminal can open the workspace under a PowerShell provider path like `\\?\C:\...`, which breaks `npm run ...` because `cmd.exe`, Node, and Next do not consistently normalize it.
 
+The app now includes a second page at [http://localhost:3000/embedding-space](http://localhost:3000/embedding-space) that projects the local embedding corpus into a browser-based 3D map.
+
 ## Environment variables
 
 - `OPENAI_API_KEY` is required for both bots.
@@ -87,6 +89,21 @@ The Smart Bot:
 4. Sends the retrieved evidence to an OpenAI model to generate the final answer.
 
 The first Smart Bot request takes longer because it builds the local embedding index. After that, the corpus embeddings are reused for the rest of the session.
+
+### Embedding Space Page
+
+The `/embedding-space` route uses the same OpenAI embeddings as the Smart Bot and lets you explore the space in several ways:
+
+- switch between `record`, `chunk`, `sentence`, and `field` granularities so each source item can appear as one point or many smaller semantic fragments
+- switch between `PCA` and `UMAP` projections
+- switch between a rotatable `3D` view and flattened `2D` `XY` / `XZ` / `YZ` plane views
+- optionally overlay multiple centroid families including `tag`, `tone`, `source kind`, and `customer`
+- optionally overlay the curated example questions as saved query points in the same semantic space
+- see support tickets, enhancements, and incidents as nearby or distant semantic neighbors
+- place an example query into the same space
+- inspect the nearest evidence the Smart Bot is likely to retrieve
+- inspect which saved demo questions land nearest to the current query
+- explain visually why semantically similar records cluster even when the wording differs
 
 ## Demo data
 

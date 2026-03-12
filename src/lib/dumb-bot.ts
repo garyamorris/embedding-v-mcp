@@ -11,10 +11,11 @@ import {
   supportTags,
 } from "@/lib/mcp-tools";
 import { RESPONSE_MODEL, getOpenAIClient } from "@/lib/openai";
+import { uiCopy } from "@/lib/ui-copy";
 
-const DUMB_BOT_INSTRUCTIONS = `You are MCP Bot.
+const DUMB_BOT_INSTRUCTIONS = `You are Tool Bot.
 
-You are a typical MCP-style support assistant. Answer the user's questions as well as you can using the available MCP tools.
+You are a support assistant that answers questions by using the available retrieval tools.
 
 Rules:
 - Always use tools before answering
@@ -140,24 +141,24 @@ function collectLiteralHandles(toolTrace: ToolTrace[]) {
 function buildVerdict(retrieved: EvidenceCard[]) {
   if (!retrieved.length) {
     return {
-      verdict: "Tool agent found little exact evidence.",
+      verdict: "Limited exact matches were found.",
       limitation:
-        "This bot can only work through explicit tool calls with literal matching, so broad meaning-based questions still collapse into weak lookups.",
+        "This path depends on keyword, tag, and exact-name matches, so broad questions can return thin evidence.",
     };
   }
 
   if (!retrieved.some((item) => item.kind === "enhancement")) {
     return {
-      verdict: "Tool agent found literal symptoms, but weak downstream recommendations.",
+      verdict: "The tool path found symptoms more easily than related improvements.",
       limitation:
-        "The tools can surface direct matches, but they still struggle to connect those matches to implied improvements unless an exact enhancement name is found.",
+        "It can retrieve direct matches, but it does not infer related improvement ideas unless they are named or matched explicitly.",
     };
   }
 
   return {
-    verdict: "Tool agent answered from rigid tool outputs only.",
+    verdict: "The answer is grounded in explicit tool matches.",
     limitation:
-      "Even when it finds evidence, this bot is still bounded by exact tool behavior and cannot do semantic clustering across differently phrased tickets.",
+      "This path stays within explicit tool outputs and does not group differently worded records by meaning.",
   };
 }
 
@@ -230,24 +231,24 @@ export async function runDumbBot(query: string): Promise<BotResult> {
   const evaluation = buildVerdict(retrieved);
   const trace: TraceStep[] = [
     {
-      title: "User query",
+      title: uiCopy.traces.tool.question,
       summary:
-        "Sent the question to a tool-using model that could choose from a small MCP-style toolset.",
+        "Sent the question to a model that could choose from a small tool set.",
       detail: query,
     },
     {
-      title: "Tool selection",
+      title: uiCopy.traces.tool.planning,
       summary: toolTrace.length
-        ? `The model selected ${new Set(toolTrace.map((item) => item.toolName)).size} tool(s) and followed a procedural lookup path.`
-        : "The model did not find a confident tool path before answering.",
+        ? `The model selected ${new Set(toolTrace.map((item) => item.toolName)).size} tool(s) and followed a structured lookup path.`
+        : "The model did not settle on a strong tool plan before answering.",
       detail: Array.from(new Set(toolTrace.map((item) => item.toolName))).join("\n"),
     },
     {
-      title: "Keyword extraction",
+      title: uiCopy.traces.tool.searchTerms,
       summary:
         handles.keywords.length || handles.tags.length || handles.enhancementNames.length
-          ? "The tool agent turned the question into literal tool arguments before retrieval."
-          : "The tool agent did not settle on useful literal handles.",
+          ? "The question was translated into explicit search terms and filters before retrieval."
+          : "No strong literal search terms or filters were selected.",
       detail: [
         `Available tag filters: ${supportTags.join(", ")}`,
         "Available enhancement lookup: exact name only",
@@ -265,22 +266,22 @@ export async function runDumbBot(query: string): Promise<BotResult> {
           : "warning",
     },
     {
-      title: "Tool calls made",
+      title: uiCopy.traces.tool.toolCalls,
       summary: toolTrace.length
-        ? `Ran ${toolTrace.length} actual tool call(s).`
+        ? `Ran ${toolTrace.length} tool call(s).`
         : "No tool calls were executed.",
       detail: toolTrace.map((entry) => entry.summary).join("\n"),
     },
     {
-      title: "Results found",
+      title: uiCopy.traces.tool.matches,
       summary: retrieved.length
-        ? `Retrieved ${retrieved.length} literal evidence item(s).`
-        : "No strong literal matches were found.",
+        ? `Retrieved ${retrieved.length} exact-match evidence item(s).`
+        : "No strong exact matches were found.",
       items: retrieved,
       tone: retrieved.length ? "neutral" : "warning",
     },
     {
-      title: "Final answer",
+      title: uiCopy.traces.tool.answer,
       summary: evaluation.verdict,
       detail: evaluation.limitation,
       tone: retrieved.length ? "warning" : "warning",
@@ -291,7 +292,7 @@ export async function runDumbBot(query: string): Promise<BotResult> {
     mode: "dumb",
     answer:
       response.output_text.trim() ||
-      "I could not produce a strong answer from the available literal tool outputs.",
+      "I could not produce a strong answer from the available tool results.",
     verdict: evaluation.verdict,
     limitation: evaluation.limitation,
     retrieved,
@@ -303,27 +304,27 @@ export function buildDumbBotError(error: unknown): BotResult {
   const message =
     error instanceof Error
       ? error.message
-      : "The tool-using bot could not complete its MCP-style retrieval flow.";
+      : "The Tool Bot could not complete the retrieval flow.";
   const nestedCode = extractNestedCode(error);
 
   if (message.includes("OPENAI_API_KEY")) {
     return {
       mode: "dumb",
       answer:
-        "The tool-using bot could not start because the OpenAI model needed to orchestrate the tools is not configured.",
-      verdict: "Tool agent unavailable.",
+        "The Tool Bot could not start because the model configuration is incomplete.",
+      verdict: uiCopy.labels.setupIssue,
       limitation:
-        "Set OPENAI_API_KEY in .env.local to enable the tool-calling MCP comparison bot.",
+        "Set OPENAI_API_KEY in .env.local to enable the Tool Bot.",
       error: message,
-      errorLabel: "Config issue",
+      errorLabel: uiCopy.labels.setupIssue,
       retrieved: [],
       trace: [
         {
-          title: "User query",
-          summary: "The request reached the tool-using bot.",
+          title: uiCopy.traces.tool.question,
+          summary: "The request reached the Tool Bot.",
         },
         {
-          title: "Tool selection",
+          title: uiCopy.traces.tool.planning,
           summary: "The model could not be initialized.",
           detail: message,
           tone: "warning",
@@ -334,24 +335,24 @@ export function buildDumbBotError(error: unknown): BotResult {
 
   if (nestedCode === "UNABLE_TO_GET_ISSUER_CERT_LOCALLY") {
     const detail =
-      "Node could not validate the TLS issuer for api.openai.com while the tool bot tried to call the OpenAI model. Start the app with system certificate support enabled.";
+      "Node could not validate the TLS issuer for api.openai.com while the Tool Bot tried to call the model. Start the app with system certificate support enabled.";
 
     return {
       mode: "dumb",
       answer:
-        "The tool-using bot could not reach the OpenAI API because Node rejected the local TLS certificate chain.",
-      verdict: "TLS connection issue.",
+        "The Tool Bot could not reach the OpenAI API because Node rejected the local TLS certificate chain.",
+      verdict: uiCopy.labels.tlsIssue,
       limitation: detail,
       error: `${message} (${nestedCode})`,
-      errorLabel: "TLS issue",
+      errorLabel: uiCopy.labels.tlsIssue,
       retrieved: [],
       trace: [
         {
-          title: "User query",
-          summary: "The request reached the tool-using bot.",
+          title: uiCopy.traces.tool.question,
+          summary: "The request reached the Tool Bot.",
         },
         {
-          title: "Tool selection",
+          title: uiCopy.traces.tool.planning,
           summary: "The model call failed before any tool could be selected.",
           detail,
           tone: "warning",
@@ -363,20 +364,20 @@ export function buildDumbBotError(error: unknown): BotResult {
   return {
     mode: "dumb",
     answer:
-      "The tool-using bot could not complete its MCP-style retrieval flow because the model request failed.",
-    verdict: "Connection issue.",
+      "The Tool Bot could not complete the retrieval flow because the model request failed.",
+    verdict: uiCopy.labels.connectionIssue,
     limitation:
-      "The tool bot now depends on an OpenAI model to choose and sequence tool calls, so outbound model failures block this path.",
+      "The Tool Bot depends on a model to choose and sequence tool calls, so outbound model failures block this path.",
     error: message,
-    errorLabel: "Connection issue",
+    errorLabel: uiCopy.labels.connectionIssue,
     retrieved: [],
     trace: [
       {
-        title: "User query",
-        summary: "The request reached the tool-using bot.",
+        title: uiCopy.traces.tool.question,
+        summary: "The request reached the Tool Bot.",
       },
       {
-        title: "Tool selection",
+        title: uiCopy.traces.tool.planning,
         summary: "The model call failed before tool execution completed.",
         detail: message,
         tone: "warning",

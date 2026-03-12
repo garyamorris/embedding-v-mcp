@@ -1,4 +1,5 @@
 import type { BotResult, ComparisonSummary } from "@/lib/demo-types";
+import { uiCopy } from "@/lib/ui-copy";
 
 function firstTitles(bot: BotResult, kind: "support" | "enhancement" | "incident") {
   return bot.retrieved
@@ -20,44 +21,44 @@ export function buildComparisonSummary(
   smart: BotResult,
 ): ComparisonSummary {
   if (dumb.error) {
-    if (dumb.errorLabel === "Config issue") {
+    if (dumb.errorLabel === uiCopy.labels.setupIssue) {
       return {
-        headline: "The tool bot needs an OpenAI API key.",
-        body: dumb.error,
+        headline: "Tool Bot could not start.",
+        body: dumb.error ?? "The Tool Bot is not available.",
       };
     }
 
-    if (dumb.errorLabel === "TLS issue") {
+    if (dumb.errorLabel === uiCopy.labels.tlsIssue) {
       return {
-        headline: "The tool bot is hitting a TLS trust issue.",
-        body: dumb.error,
+        headline: "Tool Bot could not connect.",
+        body: dumb.error ?? "The Tool Bot hit a TLS issue.",
       };
     }
 
     return {
-      headline: "The tool bot hit a connection problem.",
-      body: dumb.error,
+      headline: "Tool Bot could not complete the request.",
+      body: dumb.error ?? "The Tool Bot hit a connection issue.",
     };
   }
 
   if (smart.error) {
-    if (smart.errorLabel === "Config issue") {
+    if (smart.errorLabel === uiCopy.labels.setupIssue) {
       return {
-        headline: "The semantic path needs an OpenAI API key.",
-        body: smart.error,
+        headline: "Semantic Bot could not start.",
+        body: smart.error ?? "The Semantic Bot is not available.",
       };
     }
 
-    if (smart.errorLabel === "TLS issue") {
+    if (smart.errorLabel === uiCopy.labels.tlsIssue) {
       return {
-        headline: "The semantic path is hitting a TLS trust issue.",
-        body: smart.error,
+        headline: "Semantic Bot could not connect.",
+        body: smart.error ?? "The Semantic Bot hit a TLS issue.",
       };
     }
 
     return {
-      headline: "The semantic path hit a connection problem.",
-      body: smart.error,
+      headline: "Semantic Bot could not complete the request.",
+      body: smart.error ?? "The Semantic Bot hit a connection issue.",
     };
   }
 
@@ -69,20 +70,20 @@ export function buildComparisonSummary(
 
   if (!dumb.retrieved.length) {
     return {
-      headline: "The tool bot stalled on literal retrieval.",
-      body: `It could not find enough exact keyword, tag, or enhancement-name matches to answer strongly. The embedding bot still linked the question to evidence and surfaced improvements such as ${enhancementText}.`,
+      headline: "Semantic retrieval found stronger support for this question.",
+      body: `The Tool Bot did not find enough exact matches to answer confidently. The Semantic Bot still connected the question to related evidence and surfaced improvements such as ${enhancementText}.`,
     };
   }
 
   if (!firstTitles(dumb, "enhancement").length && smartEnhancements.length) {
     return {
-      headline: "The tool bot found symptoms, but not implied fixes.",
-      body: `It stayed close to surface terms${dumbKeywords.length ? ` like ${dumbKeywords.join(", ")}` : ""} and could not bridge those matches to enhancement ideas unless a name was explicitly mentioned. The embedding bot connected the same evidence to ${enhancementText}.`,
+      headline: "The two paths found different levels of evidence.",
+      body: `The Tool Bot stayed close to exact terms${dumbKeywords.length ? ` such as ${dumbKeywords.join(", ")}` : ""} and did not connect those matches to related improvements. The Semantic Bot linked the same question to ${enhancementText}.`,
     };
   }
 
   return {
-    headline: "The embedding bot connected a broader product story.",
-    body: `The tool bot stayed procedural and literal${dumbKeywords.length ? ` around ${dumbKeywords.join(", ")}` : ""}. The embedding bot grouped differently worded tickets into the same design problems and returned a more actionable answer.`,
+    headline: "Both paths answered, but they used different evidence.",
+    body: `The Tool Bot stayed close to exact matches${dumbKeywords.length ? ` around ${dumbKeywords.join(", ")}` : ""}. The Semantic Bot grouped related records that used different language and returned a broader answer.`,
   };
 }

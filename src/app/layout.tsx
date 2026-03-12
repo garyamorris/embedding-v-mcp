@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
+
+import { uiCopy } from "@/lib/ui-copy";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Embeddings vs MCP Demo",
-  description:
-    "A lightweight support-ticket demo that compares literal MCP-style retrieval with semantic embedding search.",
+  title: uiCopy.metadata.appTitle,
+  description: uiCopy.metadata.appDescription,
 };
 
 export default function RootLayout({

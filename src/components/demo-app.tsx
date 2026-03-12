@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
 
 import { datasetStats, exampleQueries } from "@/data/demo-data";
@@ -9,24 +10,18 @@ import type {
   EvidenceCard,
   TraceStep,
 } from "@/lib/demo-types";
+import {
+  buildCompareMetric,
+  formatEvidenceKind,
+  formatTraceTone,
+  uiCopy,
+} from "@/lib/ui-copy";
 
 import styles from "./demo-app.module.css";
 
 type Turn = ComparePayload & {
   id: string;
 };
-
-function formatKind(kind: EvidenceCard["kind"]) {
-  if (kind === "support") {
-    return "Support";
-  }
-
-  if (kind === "enhancement") {
-    return "Enhancement";
-  }
-
-  return "Incident";
-}
 
 function EvidenceCluster({ items }: { items: EvidenceCard[] }) {
   if (!items.length) {
@@ -38,7 +33,7 @@ function EvidenceCluster({ items }: { items: EvidenceCard[] }) {
       {items.map((item) => (
         <article key={`${item.kind}-${item.id}`} className={styles.evidenceCard}>
           <div className={styles.evidenceMeta}>
-            <span className={styles.kindPill}>{formatKind(item.kind)}</span>
+            <span className={styles.kindPill}>{formatEvidenceKind(item.kind)}</span>
             {typeof item.score === "number" ? (
               <span className={styles.metricPill}>sim {item.score.toFixed(3)}</span>
             ) : null}
@@ -50,7 +45,9 @@ function EvidenceCluster({ items }: { items: EvidenceCard[] }) {
           </div>
           <h4>{item.title}</h4>
           <p>{item.summary}</p>
-          <span className={styles.tagLine}>{item.tags.join(" / ")}</span>
+          {item.tags.length ? (
+            <span className={styles.tagLine}>{item.tags.join(" / ")}</span>
+          ) : null}
         </article>
       ))}
     </div>
@@ -76,7 +73,7 @@ function TraceList({ steps }: { steps: TraceStep[] }) {
                         : styles.traceToneNeutral
                   }`}
                 >
-                  {step.tone}
+                  {formatTraceTone(step.tone)}
                 </span>
               ) : null}
             </div>
@@ -92,54 +89,52 @@ function TraceList({ steps }: { steps: TraceStep[] }) {
 
 function BotPanel({
   title,
-  eyebrow,
+  label,
   subtitle,
+  emptyTitle,
+  emptyBody,
+  loadingText,
   turns,
   isLoading,
   mode,
 }: {
   title: string;
-  eyebrow: string;
+  label: string;
   subtitle: string;
+  emptyTitle: string;
+  emptyBody: string;
+  loadingText: string;
   turns: Turn[];
   isLoading: boolean;
   mode: BotResult["mode"];
 }) {
   const panelClassName =
     mode === "dumb"
-      ? `${styles.botPanel} ${styles.dumbPanel}`
-      : `${styles.botPanel} ${styles.smartPanel}`;
+      ? `${styles.botPanel} ${styles.toolPanel}`
+      : `${styles.botPanel} ${styles.semanticPanel}`;
 
   return (
     <section className={panelClassName}>
       <header className={styles.panelHeader}>
-        <span className={styles.eyebrow}>{eyebrow}</span>
-        <div className={styles.panelHeading}>
+        <div>
+          <span className={styles.eyebrow}>{label}</span>
           <h2>{title}</h2>
-          <p>{subtitle}</p>
         </div>
+        <p>{subtitle}</p>
       </header>
 
       <div className={styles.stream}>
-        {!turns.length ? (
+        {!turns.length && !isLoading ? (
           <div className={styles.emptyState}>
-            <h3>{mode === "dumb" ? "Rigid by design" : "Meaning-first retrieval"}</h3>
-            <p>
-              {mode === "dumb"
-                ? "Uses an OpenAI model to drive a fixed MCP-style toolset. The orchestration is realistic, but the retrieval layer is still literal and brittle."
-                : "Embeds the query, ranks nearby support evidence semantically, and then drafts an answer from the best matches."}
-            </p>
+            <h3>{emptyTitle}</h3>
+            <p>{emptyBody}</p>
           </div>
         ) : null}
 
         {isLoading ? (
           <div className={styles.loadingCard}>
             <div className={styles.loadingPulse} />
-            <p>
-              {mode === "dumb"
-                ? "Letting the tool bot choose and call rigid tools..."
-                : "Embedding the query and ranking the local corpus..."}
-            </p>
+            <p>{loadingText}</p>
           </div>
         ) : null}
 
@@ -149,18 +144,15 @@ function BotPanel({
           return (
             <article key={`${turn.id}-${mode}`} className={styles.turnCard}>
               <div className={styles.userBubble}>
-                <span className={styles.bubbleLabel}>User query</span>
+                <span className={styles.bubbleLabel}>{uiCopy.labels.question}</span>
                 <p>{turn.query}</p>
               </div>
 
               <div className={styles.answerBubble}>
                 <div className={styles.answerMeta}>
-                  <span className={styles.resultPill}>{result.verdict}</span>
-                  {result.error ? (
-                    <span className={styles.errorPill}>
-                      {result.errorLabel ?? "Error"}
-                    </span>
-                  ) : null}
+                  <span className={result.error ? styles.errorPill : styles.resultPill}>
+                    {result.error ? result.errorLabel ?? result.verdict : result.verdict}
+                  </span>
                 </div>
 
                 <pre className={styles.answerText}>{result.answer}</pre>
@@ -168,11 +160,11 @@ function BotPanel({
                   <p className={styles.limitation}>{result.limitation}</p>
                 ) : null}
 
-                <div className={styles.sectionLabel}>Retrieved evidence</div>
-                <EvidenceCluster items={result.retrieved.slice(0, 6)} />
+                <div className={styles.sectionLabel}>{uiCopy.labels.retrievedEvidence}</div>
+                <EvidenceCluster items={result.retrieved.slice(0, 5)} />
 
                 <details className={styles.traceDisclosure}>
-                  <summary>Process trace</summary>
+                  <summary>{uiCopy.labels.processTrace}</summary>
                   <TraceList steps={result.trace} />
                 </details>
               </div>
@@ -191,12 +183,16 @@ export function DemoApp() {
   const [error, setError] = useState<string | null>(null);
 
   const latestTurn = turns[0];
+  const datasetSummary = `${datasetStats.support} support / ${datasetStats.enhancements} enhancements / ${datasetStats.incidents} incidents`;
   const compareLine = useMemo(() => {
     if (!latestTurn) {
-      return "Ask an advanced question to watch the literal tool chain flatten nuance while the semantic path groups related signals.";
+      return uiCopy.comparePage.sections.compareBody;
     }
 
-    return `${latestTurn.dumb.retrieved.length} literal hit(s) vs ${latestTurn.smart.retrieved.length} semantic evidence item(s).`;
+    return buildCompareMetric(
+      latestTurn.dumb.retrieved.length,
+      latestTurn.smart.retrieved.length,
+    );
   }, [latestTurn]);
 
   async function runQuery(nextQuery: string) {
@@ -236,7 +232,7 @@ export function DemoApp() {
       setError(
         caughtError instanceof Error
           ? caughtError.message
-          : "Something went wrong while comparing the bots.",
+          : "Something went wrong while comparing the retrieval paths.",
       );
     } finally {
       setIsLoading(false);
@@ -250,46 +246,67 @@ export function DemoApp() {
 
   return (
     <main className={styles.shell}>
-      <section className={styles.hero}>
-        <div className={styles.heroCopy}>
-          <span className={styles.kicker}>Embeddings vs MCP-style retrieval</span>
-          <h1>One question. Two bots. Very different evidence.</h1>
-          <p className={styles.heroText}>
-            This demo uses a local support dataset full of similar complaints phrased
-            differently. The left bot uses a normal MCP-style tool-calling workflow over rigid
-            retrieval tools. The right bot embeds the same question, finds
-            semantically related tickets and improvements, and then answers from the
-            retrieved evidence.
-          </p>
+      <header className={styles.topStrip}>
+        <div className={styles.titleBlock}>
+          <span className={styles.kicker}>{uiCopy.comparePage.hero.kicker}</span>
+          <h1>{uiCopy.comparePage.hero.title}</h1>
+          <p>{uiCopy.comparePage.hero.body}</p>
         </div>
 
-        <div className={styles.heroAside}>
-          <div className={styles.statCard}>
-            <span>Dataset</span>
-            <strong>{datasetStats.support} support tickets</strong>
-            <p>
-              {datasetStats.enhancements} enhancement ideas and {datasetStats.incidents}{" "}
-              incidents.
-            </p>
-          </div>
-          <div className={styles.statCard}>
-            <span>Smart bot</span>
-            <strong>First run warms the semantic index</strong>
-            <p>The embedding corpus is cached in-memory after it is built once.</p>
-          </div>
+        <div className={styles.topActions}>
+          <Link className={styles.mapLink} href="/embedding-space">
+            {uiCopy.comparePage.hero.cta}
+          </Link>
+          <span className={styles.infoChip}>{uiCopy.comparePage.hero.datasetChip}</span>
+          <span className={styles.infoChip}>{datasetSummary}</span>
+          <span className={styles.infoChip}>{uiCopy.comparePage.hero.cacheChip}</span>
         </div>
-      </section>
+      </header>
 
-      <section className={styles.controlDeck}>
-        <div className={styles.examples}>
-          <div className={styles.sectionHead}>
-            <h2>Curated demo questions</h2>
-            <p>
-              These are designed so semantic retrieval clearly outperforms literal
-              tool calls.
-            </p>
+      <section className={styles.controlStrip}>
+        <form className={styles.queryForm} onSubmit={handleSubmit}>
+          <div className={styles.formHeader}>
+            <div>
+              <span className={styles.sectionLabel}>{uiCopy.comparePage.sections.askTitle}</span>
+              <h2>{uiCopy.comparePage.sections.askBody}</h2>
+            </div>
           </div>
-          <div className={styles.exampleGrid}>
+
+          <div className={styles.queryRow}>
+            <textarea
+              className={styles.queryInput}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={uiCopy.comparePage.sections.questionPlaceholder}
+              rows={3}
+              value={query}
+            />
+
+            <div className={styles.queryActions}>
+              <button className={styles.primaryButton} disabled={isLoading} type="submit">
+                {isLoading ? "Comparing..." : uiCopy.comparePage.sections.submit}
+              </button>
+              <button
+                className={styles.secondaryButton}
+                disabled={isLoading || !turns.length}
+                onClick={() => {
+                  setTurns([]);
+                  setError(null);
+                }}
+                type="button"
+              >
+                {uiCopy.comparePage.sections.clear}
+              </button>
+            </div>
+          </div>
+
+          {error ? <p className={styles.requestError}>{error}</p> : null}
+        </form>
+
+        <div className={styles.exampleRail}>
+          <span className={styles.sectionLabel}>
+            {uiCopy.comparePage.sections.suggestedQuestionsTitle}
+          </span>
+          <div className={styles.exampleRow}>
             {exampleQueries.map((exampleQuery) => (
               <button
                 key={exampleQuery}
@@ -306,64 +323,38 @@ export function DemoApp() {
             ))}
           </div>
         </div>
-
-        <form className={styles.composer} onSubmit={handleSubmit}>
-          <label className={styles.sectionHead} htmlFor="query">
-            <h2>Ask your own question</h2>
-            <p>The same prompt is sent to both bots.</p>
-          </label>
-          <textarea
-            id="query"
-            className={styles.queryInput}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Ask about recurring pain points, implied enhancements, or hidden reliability concerns."
-            rows={4}
-            value={query}
-          />
-          <div className={styles.composerActions}>
-            <button className={styles.primaryButton} disabled={isLoading} type="submit">
-              {isLoading ? "Comparing..." : "Compare answers"}
-            </button>
-            <button
-              className={styles.secondaryButton}
-              disabled={isLoading || !turns.length}
-              onClick={() => {
-                setTurns([]);
-                setError(null);
-              }}
-              type="button"
-            >
-              Clear transcript
-            </button>
-          </div>
-          {error ? <p className={styles.requestError}>{error}</p> : null}
-        </form>
       </section>
 
       <section className={styles.compareBanner}>
-        <div>
-          <span className={styles.sectionLabel}>Compare answers</span>
-          <h2>{latestTurn?.comparison.headline ?? "Run a query to generate the contrast."}</h2>
-          <p>{latestTurn?.comparison.body ?? compareLine}</p>
+        <div className={styles.compareCopy}>
+          <span className={styles.sectionLabel}>{uiCopy.comparePage.sections.compareLabel}</span>
+          <h2>{latestTurn?.comparison.headline ?? uiCopy.comparePage.sections.compareTitle}</h2>
+          <p>{latestTurn?.comparison.body ?? uiCopy.comparePage.sections.compareBody}</p>
         </div>
         <div className={styles.compareMetric}>{compareLine}</div>
       </section>
 
       <section className={styles.panelGrid}>
         <BotPanel
-          eyebrow="Dumb Bot"
+          emptyBody={uiCopy.comparePage.panels.tool.emptyBody}
+          emptyTitle={uiCopy.comparePage.panels.tool.emptyTitle}
           isLoading={isLoading}
+          label={uiCopy.comparePage.panels.tool.label}
+          loadingText={uiCopy.comparePage.panels.tool.loading}
           mode="dumb"
-          subtitle="Normal MCP-style tool bot. An LLM chooses rigid keyword, tag, and exact-name tools."
-          title="Tool-driven, procedural, and still surface-bound"
+          subtitle={uiCopy.comparePage.panels.tool.subtitle}
+          title={uiCopy.comparePage.panels.tool.title}
           turns={turns}
         />
         <BotPanel
-          eyebrow="Smart Bot"
+          emptyBody={uiCopy.comparePage.panels.semantic.emptyBody}
+          emptyTitle={uiCopy.comparePage.panels.semantic.emptyTitle}
           isLoading={isLoading}
+          label={uiCopy.comparePage.panels.semantic.label}
+          loadingText={uiCopy.comparePage.panels.semantic.loading}
           mode="smart"
-          subtitle="Embeddings + OpenAI answer synthesis over the local demo corpus."
-          title="Semantic, connective, and evidence-led"
+          subtitle={uiCopy.comparePage.panels.semantic.subtitle}
+          title={uiCopy.comparePage.panels.semantic.title}
           turns={turns}
         />
       </section>
