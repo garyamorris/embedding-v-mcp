@@ -1,13 +1,17 @@
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --canvas: #f4efe3;
+  --ink: #18253c;
+  --ink-soft: #55627a;
+  --line: rgba(24, 37, 60, 0.12);
+  --steel: #16304c;
+  --signal: #0f9d87;
+  --signal-soft: #c7f7ec;
+  --warning: #c55b37;
+  --warning-soft: #ffe6da;
+  --font-body: Aptos, "Avenir Next", "Segoe UI", sans-serif;
+  --font-display: "Iowan Old Style", "Palatino Linotype", "Book Antiqua",
+    Baskerville, serif;
+  --font-mono: "Cascadia Mono", "Cascadia Code", Consolas, monospace;
 }
 
 html,
@@ -16,12 +20,20 @@ body {
   overflow-x: hidden;
 }
 
+html {
+  color-scheme: light;
+}
+
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at top left, rgba(255, 201, 91, 0.48), transparent 34%),
+    radial-gradient(circle at 88% 10%, rgba(15, 157, 135, 0.18), transparent 26%),
+    linear-gradient(180deg, #fbf7ef 0%, var(--canvas) 46%, #f2eadc 100%);
+  font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
 }
 
 * {
@@ -35,8 +47,17 @@ a {
   text-decoration: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
-  }
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+textarea {
+  resize: vertical;
+}
+
+::selection {
+  background: rgba(255, 201, 91, 0.72);
+  color: var(--steel);
 }
